@@ -5,9 +5,11 @@ import {
   Routes,
   Route,
   Link,
+  Navigate,
   useLocation,
 } from "react-router-dom";
 import { StoreProvider } from "./lib/store";
+import { useStore } from "./lib/store";
 import { Layout } from "./components/Layout";
 import { Empty, Skeleton } from "./components/common";
 import { Home, PostPage, ProfilePage, Discover } from "./features/Home";
@@ -36,6 +38,13 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { authReady, session } = useStore();
+  const location = useLocation();
+  if (!authReady) return <Skeleton />;
+  if (!session) return <Navigate to="/auth" replace state={{ from: location }} />;
+  return <>{children}</>;
 }
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -67,7 +76,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <ScrollToTop />
           <Suspense fallback={<Skeleton />}>
             <Routes>
-              <Route element={<Layout />}>
+              <Route path="auth" element={<Auth />} />
+              <Route
+                element={
+                  <RequireAuth>
+                    <Layout />
+                  </RequireAuth>
+                }
+              >
                 <Route index element={<Home />} />
                 <Route path="map" element={<MapPage />} />
                 <Route path="hub" element={<Hub />} />
@@ -75,14 +91,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 <Route path="posts/:id" element={<PostPage />} />
                 <Route path="profiles/:id" element={<ProfilePage />} />
                 <Route path="discover" element={<Discover />} />
-                <Route path="auth" element={<Auth />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="rini" element={<Rini />} />
                 <Route path="feedback" element={<Feedback />} />
                 <Route path="admin" element={<Admin />} />
                 <Route
-                  path="*"
+                  path="__not-found"
                   element={
                     <Empty title="This trail doesn’t lead anywhere">
                       <Link to="/">Return to HOME</Link>

@@ -1702,6 +1702,13 @@ svg {
   font-size: 11px !important;
   color: #8f7748;
 }
+.form-error {
+  background: #fbeceb;
+  padding: 11px 13px;
+  border-radius: 7px;
+  font-size: 11px !important;
+  color: #9a4741;
+}
 .settings-page {
   max-width: 900px;
 }

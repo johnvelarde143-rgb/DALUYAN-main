@@ -57,6 +57,7 @@ export function Auth() {
   const [params] = useSearchParams();
   const [mode, setMode] = useState(params.get("mode") ?? "login");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [token, setToken] = useState("");
@@ -64,6 +65,26 @@ export function Auth() {
   const [message, setMessage] = useState("");
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
+  const [fieldError, setFieldError] = useState("");
+  const isRegister = mode === "register";
+
+  function normalizePhone(value: string) {
+    return value.trim().replace(/[\s()-]/g, "");
+  }
+
+  function validateCredentials() {
+    const identifier = email.trim();
+    if (mode !== "recovery" && !identifier) return "Enter your email or phone number.";
+    if (mode !== "recovery" && identifier.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier))
+      return "Enter a valid email address.";
+    if (mode !== "recovery" && !identifier.includes("@") && !/^\+?[1-9]\d{6,14}$/.test(normalizePhone(identifier)))
+      return "Enter a valid phone number with country code, such as +639171234567.";
+    if (isRegister && !/^\+?[1-9]\d{6,14}$/.test(normalizePhone(phone)))
+      return "Enter a valid phone number with country code, such as +639171234567.";
+    if (isRegister && password.length < 12)
+      return "Use a password with at least 12 characters.";
+    return "";
+  }
   useEffect(() => {
     if (s.session && configured)
       void backend()
@@ -166,6 +187,13 @@ export function Auth() {
                 e.preventDefault();
                 setBusy(true);
                 setMessage("");
+                setFieldError("");
+                const validationError = validateCredentials();
+                if (validationError) {
+                  setFieldError(validationError);
+                  setBusy(false);
+                  return;
+                }
                 void s
                   .run(async () => {
                     const client = backend();
@@ -175,7 +203,10 @@ export function Auth() {
                         email,
                         password,
                         options: {
-                          data: { display_name: name },
+                          data: {
+                            display_name: name.trim(),
+                            phone_number: normalizePhone(phone),
+                          },
                           emailRedirectTo: location.origin + "/auth",
                           captchaToken,
                         },
@@ -203,8 +234,12 @@ export function Auth() {
                       if (error) throw error;
                       setMessage("Password updated.");
                     } else {
+                      const identifier = email.trim();
+                      const credentials = identifier.includes("@")
+                        ? { email: identifier }
+                        : { phone: normalizePhone(identifier) };
                       const { error } = await client.auth.signInWithPassword({
-                        email,
+                        ...credentials,
                         password,
                         options: { captchaToken },
                       });
@@ -212,6 +247,9 @@ export function Auth() {
                     }
                     setPassword("");
                   }, "Authentication request completed")
+                  .then((ok) => {
+                    if (!ok) setFieldError("We could not complete that request. Check your details and try again.");
+                  })
                   .finally(() => setBusy(false));
               }}
             >
@@ -229,14 +267,30 @@ export function Auth() {
               )}
               {mode !== "recovery" && (
                 <label>
-                  Email address
+                  {mode === "login" ? "Email or phone number" : "Email address"}
                   <input
-                    type="email"
+                    type={mode === "login" ? "text" : "email"}
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
+                    autoComplete={mode === "login" ? "username" : "email"}
+                    placeholder={mode === "login" ? "you@example.com or +639..." : undefined}
                   />
+                </label>
+              )}
+              {isRegister && (
+                <label>
+                  Phone number
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                    placeholder="+639171234567"
+                    inputMode="tel"
+                  />
+                  <small>Include your country code. This is saved securely with your account profile.</small>
                 </label>
               )}
               {mode !== "reset" && (
@@ -255,6 +309,7 @@ export function Auth() {
                 </label>
               )}
               <Captcha onToken={setToken} />
+              {fieldError && <p className="form-error" role="alert">{fieldError}</p>}
               <Button
                 disabled={
                   !configured ||
@@ -312,7 +367,6 @@ export function Auth() {
             </p>
           </>
         )}
-        <Link to="/">Continue exploring as a guest →</Link>
       </section>
     </div>
   );
