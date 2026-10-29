@@ -1,0 +1,32 @@
+import { createClient } from "@supabase/supabase-js";
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+export const supabase =
+  url && key
+    ? createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : null;
+export const configured = !!supabase;
+export function backend() {
+  if (!supabase)
+    throw new Error(
+      "Supabase is not configured. This is a read-only public preview.",
+    );
+  return supabase;
+}
+export function safeLink(value: string | undefined) {
+  if (!value) return undefined;
+  try {
+    const u = new URL(value);
+    return ["https:", "mailto:", "tel:"].includes(u.protocol)
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
