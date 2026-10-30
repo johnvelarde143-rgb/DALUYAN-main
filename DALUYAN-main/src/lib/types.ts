@@ -50,6 +50,9 @@ export type Profile = {
   avatar_url: string | null;
   created_at: string;
   display_role: string | null;
+  avatar_type?: "default" | "avatar" | "upload" | null;
+  avatar_id?: string | null;
+  avatar_storage_path?: string | null;
 };
 export type Post = {
   id: string;
@@ -66,7 +69,7 @@ export type Post = {
   category: string | null;
   feedback_status: string | null;
   created_at: string;
-  profiles?: Pick<Profile, "display_name" | "avatar_url">;
+  profiles?: Pick<Profile, "display_name" | "avatar_url" | "avatar_type" | "avatar_id">;
   fictional?: boolean;
 };
 export type ActivityEvent = {

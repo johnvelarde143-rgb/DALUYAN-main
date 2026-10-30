@@ -120,7 +120,7 @@ function useStoreValue() {
         supabase.from("listings").select("*").order("name"),
         supabase
           .from("posts")
-          .select("*,profiles!posts_author_id_fkey(display_name,avatar_url)")
+          .select("*,profiles!posts_author_id_fkey(display_name,avatar_url,avatar_type,avatar_id)")
           .order("created_at", { ascending: false })
           .limit(500),
         supabase

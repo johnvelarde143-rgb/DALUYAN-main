@@ -240,6 +240,8 @@ export function PostCard({
           <Avatar
             name={p.profiles?.display_name}
             url={p.profiles?.avatar_url}
+            avatarType={p.profiles?.avatar_type}
+            avatarId={p.profiles?.avatar_id}
           />
         </Link>
         <div className="grow">
@@ -730,7 +732,7 @@ export function ProfilePage() {
   return (
     <div className="narrow-page">
       <div className="card profile-heading">
-        <Avatar name={name} />
+        <Avatar name={name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
         <h1>{name}</h1>
         <p>Public island stories</p>
       </div>
