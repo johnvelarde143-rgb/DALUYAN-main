@@ -33,6 +33,7 @@ function useStoreValue() {
   const currentUser = useRef<string | undefined>(undefined);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [registrationChecked, setRegistrationChecked] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
@@ -78,6 +79,7 @@ function useStoreValue() {
         setRole("tourist");
         setAal("aal1");
         setNeedsMfa(false);
+        setRegistrationChecked(false);
       }
       setSession(s);
       setAuthReady(true);
@@ -141,28 +143,38 @@ function useStoreValue() {
       setEvents(queries[2].data as ActivityEvent[]);
       if (uid) {
         const q = await Promise.all([
-          client.from("saved_items").select("*").eq("user_id", uid),
-          client.from("itineraries").select("*").eq("user_id", uid),
           client.from("profiles").select("*").eq("id", uid).single(),
-          client
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", uid)
-            .single(),
+          client.from("user_roles").select("role").eq("user_id", uid).single(),
           client.auth.mfa.getAuthenticatorAssuranceLevel(),
         ]);
         q.forEach((r) => {
           if (r.error) throw r.error;
         });
         if (!isCurrent()) return;
-        setSaved(q[0].data as SavedItem[]);
-        setItineraries(q[1].data as Itinerary[]);
-        setProfile(q[2].data as Profile);
-        setRole(q[3].data?.role ?? "tourist");
-        setAal(q[4].data?.currentLevel ?? "aal1");
+        const nextProfile = q[0].data as Profile;
+        setProfile(nextProfile);
+        setRegistrationChecked(true);
+        setRole(q[1].data?.role ?? "tourist");
+        setAal(q[2].data?.currentLevel ?? "aal1");
         setNeedsMfa(
-          q[4].data?.nextLevel === "aal2" && q[4].data.currentLevel !== "aal2",
+          q[2].data?.nextLevel === "aal2" && q[2].data.currentLevel !== "aal2",
         );
+        const canLoadPrivateData = nextProfile.registration_completed === true;
+        if (canLoadPrivateData) {
+          const privateQueries = await Promise.all([
+            client.from("saved_items").select("*").eq("user_id", uid),
+            client.from("itineraries").select("*").eq("user_id", uid),
+          ]);
+          privateQueries.forEach((r) => {
+            if (r.error) throw r.error;
+          });
+          if (!isCurrent()) return;
+          setSaved(privateQueries[0].data as SavedItem[]);
+          setItineraries(privateQueries[1].data as Itinerary[]);
+        } else {
+          setSaved([]);
+          setItineraries([]);
+        }
       } else {
         setSaved([]);
         setItineraries([]);
@@ -170,6 +182,7 @@ function useStoreValue() {
         setRole("tourist");
         setAal("aal1");
         setNeedsMfa(false);
+        setRegistrationChecked(true);
       }
     } catch (e) {
       if (!isCurrent()) return;
@@ -319,6 +332,8 @@ function useStoreValue() {
     setInterests,
     session,
     authReady,
+    registrationChecked,
+    registrationComplete: profile?.registration_completed === true,
     profile,
     role,
     aal,

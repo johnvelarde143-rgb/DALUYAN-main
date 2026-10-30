@@ -53,6 +53,7 @@ export type Profile = {
   avatar_type?: "default" | "avatar" | "upload" | null;
   avatar_id?: string | null;
   avatar_storage_path?: string | null;
+  registration_completed?: boolean;
 };
 export type Post = {
   id: string;
