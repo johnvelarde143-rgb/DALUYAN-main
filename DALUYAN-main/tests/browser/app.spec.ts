@@ -90,7 +90,7 @@ test("RINI cites records and hands off to itinerary engine", async ({
     page.getByRole("dialog", { name: "Plan your Marinduque journey" }),
   ).toBeVisible();
 });
-test("hub filters, demo labels, no invented contacts and no pretend auth", async ({
+test("hub filters, demo labels, no invented contacts and enabled auth", async ({
   page,
 }) => {
   await page.goto("/hub");
@@ -105,7 +105,12 @@ test("hub filters, demo labels, no invented contacts and no pretend auth", async
   await page.goto("/auth");
   await expect(
     page.getByRole("button", { name: "Sign in", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
+  await expect(
+    page.getByText("Account services are unavailable in public preview.", {
+      exact: false,
+    }),
+  ).toHaveCount(0);
   await page.goto("/notifications");
   await expect(
     page.getByRole("heading", { name: "Your journey starts here" }),
