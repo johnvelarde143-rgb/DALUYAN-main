@@ -479,7 +479,7 @@ function RegisterWizard({
       onDone(
         result.session
           ? "Your account is ready. Welcome to DALUYAN!"
-          : "Check your email for verification. Your island preferences are saved and ready for your first visit.",
+          : "Registration succeeded, but no session was returned. Turn off Confirm email in Supabase Auth to enable automatic login.",
       );
     } catch (e) {
       setError(
@@ -871,7 +871,12 @@ function RegisterWizard({
               </p>
             </div>
           </div>
+          <div className="review-details">
           <ReviewSection title="Account Information" onEdit={() => setStep(1)}>
+            <div className="review-photo-row">
+              <span>Profile picture</span>
+              {data.avatarType === "upload" && data.photoUrl ? <img src={data.photoUrl} alt="Selected profile preview" /> : <img src={avatarUrl(data.avatarId) ?? ""} alt="Selected illustrated avatar" />}
+            </div>
             <ReviewRow label="Username" value={`@${data.username}`} />
             <ReviewRow label="Email address" value={data.email} />
             <ReviewRow
@@ -933,38 +938,7 @@ function RegisterWizard({
               value={data.budget || "Not specified"}
             />
           </ReviewSection>
-          {data.recommendations && (
-            <section className="review-section">
-              <h3>Personalization Summary</h3>
-              <p>
-                DALUYAN will use your selected{" "}
-                {data.spots.length
-                  ? `spots (${data.spots.slice(0, 2).join(" and ")})`
-                  : "tourist interests"}
-                {data.hobbies.length
-                  ? `, hobbies such as ${data.hobbies.slice(0, 2).join(" and ")}`
-                  : ""}
-                {data.travelStyles.length
-                  ? `, and ${data.travelStyles.join(", ")} travel style${data.travelStyles.length > 1 ? "s" : ""}`
-                  : ""}{" "}
-                to prioritize relevant destination records and experiences for
-                you.
-              </p>
-            </section>
-          )}
-          <p>
-            <b>Profile</b>
-            <br />
-            {data.birthdate} · {age || "Age pending"} ·{" "}
-            {data.gender || "Gender private"}
-          </p>
-          <p>
-            <b>Discovering</b>
-            <br />
-            {data.spots.length
-              ? data.spots.join(" · ")
-              : "Preferences skipped for now"}
-          </p>
+          </div>
           <section className="review-section consent-section">
             <h3>Before You Create Your Account</h3>
             <p className="muted">
@@ -1241,7 +1215,7 @@ export function Auth() {
                     const client = backend();
                     const captchaToken = token || undefined;
                     if (mode === "register") {
-                      const { error } = await client.auth.signUp({
+                      const { data: authData, error } = await client.auth.signUp({
                         email,
                         password,
                         options: {
@@ -1255,7 +1229,9 @@ export function Auth() {
                       });
                       if (error) throw error;
                       setMessage(
-                        "Check your email for verification. Registration does not bypass email confirmation.",
+                        authData.session
+                          ? "Your account is ready. Welcome to DALUYAN!"
+                          : "Registration succeeded. Disable Confirm email in Supabase Auth settings to sign in automatically.",
                       );
                     } else if (mode === "reset") {
                       const { error } = await client.auth.resetPasswordForEmail(

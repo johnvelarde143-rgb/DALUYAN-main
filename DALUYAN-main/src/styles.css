@@ -349,6 +349,29 @@ textarea {
 .review-section h3 {
   color: var(--teal);
 }
+.review-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.review-details .review-section:nth-child(3) {
+  grid-column: 1 / -1;
+}
+.review-photo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.review-photo-row img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--teal);
+}
 .review-row,
 .review-list {
   display: grid;
@@ -424,6 +447,12 @@ textarea {
   line-height: 1.65;
 }
 @media (max-width: 620px) {
+  .review-details {
+    grid-template-columns: 1fr;
+  }
+  .review-details .review-section:nth-child(3) {
+    grid-column: auto;
+  }
   .wizard-grid,
   .interest-grid {
     grid-template-columns: 1fr;

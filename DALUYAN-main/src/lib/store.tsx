@@ -8,8 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { backend, configured, supabase } from "./supabase";
-import { seedListings, seedPosts } from "../data";
+import { backend, supabase } from "./supabase";
 import type {
   Listing,
   Post,
@@ -33,11 +32,9 @@ function useStoreValue() {
   const requestVersion = useRef(0);
   const currentUser = useRef<string | undefined>(undefined);
   const [session, setSession] = useState<Session | null>(null);
-  const [authReady, setAuthReady] = useState(!configured);
-  const [listings, setListings] = useState<Listing[]>(
-    configured ? [] : seedListings,
-  );
-  const [posts, setPosts] = useState<Post[]>(configured ? [] : seedPosts);
+  const [authReady, setAuthReady] = useState(false);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [saved, setSaved] = useState<SavedItem[]>([]);
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
@@ -45,7 +42,7 @@ function useStoreValue() {
   const [needsMfa, setNeedsMfa] = useState(false);
   const [role, setRole] = useState("tourist");
   const [aal, setAal] = useState("aal1");
-  const [loading, setLoading] = useState(configured);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [interests, setInterestState] = useState<string[]>([]);
   const [toast, setToast] = useState("");
@@ -57,7 +54,13 @@ function useStoreValue() {
     }
   }, [toast]);
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setError(
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to use DALUYAN.",
+      );
+      setAuthReady(true);
+      return;
+    }
     void supabase.auth.getSession().then(({ data, error }) => {
       if (error) setError(error.message);
       setSession(data.session);
@@ -110,20 +113,20 @@ function useStoreValue() {
     }
   }
   const refresh = useCallback(async () => {
-    if (!supabase) return;
     const version = ++requestVersion.current;
     const isCurrent = () => version === requestVersion.current;
     setLoading(true);
     setError("");
     try {
+      const client = backend();
       const queries = await Promise.all([
-        supabase.from("listings").select("*").order("name"),
-        supabase
+        client.from("listings").select("*").order("name"),
+        client
           .from("posts")
           .select("*,profiles!posts_author_id_fkey(display_name,avatar_url,avatar_type,avatar_id)")
           .order("created_at", { ascending: false })
           .limit(500),
-        supabase
+        client
           .from("activity_events")
           .select("*")
           .order("created_at", { ascending: false })
@@ -138,15 +141,15 @@ function useStoreValue() {
       setEvents(queries[2].data as ActivityEvent[]);
       if (uid) {
         const q = await Promise.all([
-          supabase.from("saved_items").select("*").eq("user_id", uid),
-          supabase.from("itineraries").select("*").eq("user_id", uid),
-          supabase.from("profiles").select("*").eq("id", uid).single(),
-          supabase
+          client.from("saved_items").select("*").eq("user_id", uid),
+          client.from("itineraries").select("*").eq("user_id", uid),
+          client.from("profiles").select("*").eq("id", uid).single(),
+          client
             .from("user_roles")
             .select("role")
             .eq("user_id", uid)
             .single(),
-          supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+          client.auth.mfa.getAuthenticatorAssuranceLevel(),
         ]);
         q.forEach((r) => {
           if (r.error) throw r.error;

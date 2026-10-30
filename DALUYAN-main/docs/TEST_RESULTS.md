@@ -28,7 +28,7 @@ Limits: these tests do **not** issue real Supabase JWTs or contact Auth, Storage
 1. Guest HOME renders, Torrijos filter selects two actual fixture records, destination route opens, unknown fee and forecast failure are displayed.
 2. MAP shows six places; Boac filter changes the list to one; Lenten simulation gives 154.7% utilization; editing additional visitors gives 128.0%; unverified records yield the explicit no-recommendation state.
 3. RINI widget opens/closes accessibly; the RINI page returns a cited Boac record and connects the request to the real MAP itinerary dialog.
-4. Hub category filters real records; fictional business profile has no invented contact; unconfigured login is disabled; guest notifications prompt for login; admin route redirects to authentication.
+4. Hub category filters real records; fictional business profile has no invented contact; login controls are enabled; guest notifications prompt for login; admin route redirects to authentication.
 5. Mobile drawer opens/navigates/highlights active route/closes after navigation, Escape and outside click; keyboard focus returns to its opener. HOME/MAP/HUB/RINI/SETTINGS/AUTH have no horizontal overflow at 390px. Screenshots were captured locally.
 
 Weather calls are deliberately answered with HTTP 503 and OSM tile requests aborted in these tests. This proves fallback behavior, **not live weather or tile availability**. The last local screenshots are generated under ignored `test-results/desktop-detail.png` and `test-results/mobile-home.png`; they are not deployment screenshots. Real mobile device/screen-reader checks remain unrun.
@@ -51,7 +51,7 @@ Final counts above reflect reruns after these fixes. No failing result is reclas
 | #   | Category                 | Executed evidence / remaining acceptance                                                                               |
 | --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | 1   | Guest browsing           | PASS browser                                                                                                           |
-| 2   | Registration/login       | UI/config gating checked; real provider flow UNRUN                                                                     |
+| 2   | Registration/login       | Login and registration controls enabled; real provider flow UNRUN                                                     |
 | 3   | Session persistence      | SDK configured; real reload/logout/token refresh UNRUN                                                                 |
 | 4   | MFA enrollment/challenge | SQL assurance checks PASS; authenticator flow UNRUN                                                                    |
 | 5   | Protected routes         | Guest browser redirect and SQL role/AAL checks PASS; hosted admin UI UNRUN                                             |

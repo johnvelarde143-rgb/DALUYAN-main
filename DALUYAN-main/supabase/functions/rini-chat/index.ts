@@ -22,7 +22,10 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "POST required" }, 405);
   const authHeader = request.headers.get("Authorization");
   if (!authHeader) return json({ error: "Authentication required" }, 401);
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseKey) return json({ error: "Supabase function credentials are not configured." }, 503);
+  const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return json({ error: "Authentication required" }, 401);
   const body = await request.json().catch(() => null);
