@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ImagePlus,
   MapPin,
   MessageCircle,
-  MoreHorizontal,
   Heart,
   Share2,
   Bookmark,
@@ -14,6 +13,8 @@ import {
   Pencil,
   Trash2,
   Send,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useStore } from "../lib/store";
 import { rankFeed } from "../lib/intelligence";
@@ -31,7 +32,6 @@ import {
 } from "../components/common";
 import { Butterfly } from "../components/CulturalArt";
 import { Weather } from "../components/Weather";
-import { MunicipalityStories } from "../components/MunicipalityStories";
 export function Composer({
   open,
   setOpen,
@@ -178,8 +178,13 @@ export function Composer({
             <div className="card preview-post">
               <Badge>Preview</Badge>
               <p>{body}</p>
-              {files.map((f) => (
-                <PreviewImage key={f.name} file={f} />
+              {files.map((f, index) => (
+                <div className="upload-preview-wrap" key={`${f.name}-${index}`}>
+                  <PreviewImage file={f} />
+                  <button type="button" className="text-link" onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}>
+                    Remove
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -211,6 +216,45 @@ function PreviewImage({ file }: { file: File }) {
     />
   );
 }
+
+function PostMediaCarousel({ urls, fictional, municipality }: { urls: string[]; fictional?: boolean; municipality: string }) {
+  const [index, setIndex] = useState(0);
+  const touchStart = useRef<number | null>(null);
+  const move = (delta: number) => setIndex((current) => (current + delta + urls.length) % urls.length);
+  const source = fictional ? `/textile-${(municipality.length % 3) + 1}.svg` : urls[index];
+  return (
+    <div
+      className="post-media-carousel"
+      role="region"
+      aria-label={`Post photo ${index + 1} of ${urls.length}`}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") move(-1);
+        if (event.key === "ArrowRight") move(1);
+      }}
+      onTouchStart={(event) => { touchStart.current = event.changedTouches[0]?.clientX ?? null; }}
+      onTouchEnd={(event) => {
+        if (touchStart.current === null) return;
+        const distance = (event.changedTouches[0]?.clientX ?? touchStart.current) - touchStart.current;
+        if (Math.abs(distance) > 36) move(distance < 0 ? 1 : -1);
+        touchStart.current = null;
+      }}
+      tabIndex={0}
+    >
+      <img
+        src={source}
+        alt={fictional ? "Original Philippine textile-inspired geometric illustration, not a destination photograph" : `Travel photograph ${index + 1} of ${urls.length}`}
+        loading="lazy"
+        onError={(event) => { event.currentTarget.src = "/landscape-1.svg"; }}
+      />
+      {urls.length > 1 && <>
+        <button type="button" className="carousel-control carousel-prev" aria-label="Previous photo" onClick={() => move(-1)}><ChevronLeft size={20} /></button>
+        <button type="button" className="carousel-control carousel-next" aria-label="Next photo" onClick={() => move(1)}><ChevronRight size={20} /></button>
+        <span className="carousel-counter">{index + 1} / {urls.length}</span>
+        <div className="carousel-dots" aria-label="Choose a photo">{urls.map((url, dotIndex) => <button key={url + dotIndex} type="button" className={dotIndex === index ? "active" : ""} aria-label={`Show photo ${dotIndex + 1}`} onClick={() => setIndex(dotIndex)} />)}</div>
+      </>}
+    </div>
+  );
+}
 export function PostCard({
   post: p,
   depth = 0,
@@ -227,7 +271,6 @@ export function PostCard({
   );
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const l = s.listings.find((l) => l.id === p.listing_id);
   const replies = s.posts.filter((x) => x.parent_id === p.id);
   const reactions = s.events.filter(
@@ -269,30 +312,32 @@ export function PostCard({
             <Flag size={16} />
           </button>
         )}
-        {own && <div className="post-menu"><button className="icon-button" aria-label="Post options" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><MoreHorizontal size={17} /></button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setDraft(p.body); setDialog("edit"); setMenuOpen(false); }}><Pencil size={15} />Edit</button><button onClick={() => { setDialog("delete"); setMenuOpen(false); }}><Trash2 size={15} />Delete</button></div>}</div>}
+        {own && (
+          <>
+            <button
+              className="icon-button"
+              aria-label="Edit post"
+              onClick={() => {
+                setDraft(p.body);
+                setDialog("edit");
+              }}
+            >
+              <Pencil size={15} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Delete post"
+              onClick={() => setDialog("delete")}
+            >
+              <Trash2 size={15} />
+            </button>
+          </>
+        )}
       </div>
       {p.post_type === "review" && <Stars value={p.rating ?? 0} />}
       <p className="post-text">{p.body}</p>
-      {(p.category || p.visibility === "private") && <div className="post-labels">{p.category && <Badge>{p.category}</Badge>}{p.visibility === "private" && <Badge>ONLY ME</Badge>}</div>}
       {p.media_urls.length > 0 && (
-        <div className={"post-media media-" + p.media_urls.length}>
-          {p.media_urls.map((src, i) => (
-            <img
-              key={src}
-              src={
-                p.fictional
-                  ? `/textile-${(p.municipality.length % 3) + 1}.svg`
-                  : src
-              }
-              alt={
-                p.fictional
-                  ? "Original Philippine textile-inspired geometric illustration, not a destination photograph"
-                  : `Travel photograph ${i + 1}`
-              }
-              loading="lazy"
-            />
-          ))}
-        </div>
+        <PostMediaCarousel urls={p.media_urls} fictional={p.fictional} municipality={p.municipality} />
       )}
       {l && (
         <div className="post-place">
@@ -449,7 +494,7 @@ export function PostCard({
                 if (dialog === "report")
                   await s.interact(p.id, "report", draft);
                 if (dialog === "edit") await s.editPost(p.id, draft);
-                if (dialog === "delete") await s.removePost(p.id, p.media_urls);
+                if (dialog === "delete") await s.removePost(p.id);
                 setDialog(null);
               }, "Content updated")
               .finally(() => setBusy(false));
@@ -487,7 +532,7 @@ export function Home() {
   const [limit, setLimit] = useState(6);
   const [compose, setCompose] = useState(false);
   const feed = rankFeed(
-    s.posts.filter((post) => post.visibility !== "private"),
+    s.posts,
     municipality,
     s.interests,
     s.listings,
@@ -512,7 +557,27 @@ export function Home() {
               Explore all <ArrowUpRight size={14} />
             </Link>
           </div>
-          <MunicipalityStories towns={municipalities} selected={municipality} onSelect={(town) => { setMunicipality(town); setLimit(6); }} />
+          <div className="stories-track">
+            {municipalities.map((town, i) => (
+              <button
+                key={town}
+                className="town-story"
+                aria-label={`Show stories from ${town}`}
+                aria-pressed={municipality === town}
+                onClick={() => {
+                  setMunicipality(town);
+                  setLimit(6);
+                }}
+              >
+                <span className="story-ring">
+                  <span className={`story-art story-art-${i % 3}`}>
+                    <span>{town.slice(0, 2).toUpperCase()}</span>
+                  </span>
+                </span>
+                <span>{town}</span>
+              </button>
+            ))}
+          </div>
         </section>
         <section className="feed-welcome">
           <div>
@@ -693,12 +758,10 @@ export function ProfilePage() {
   const name =
     posts[0]?.profiles?.display_name ??
     (s.session?.user.id === id ? s.profile?.display_name : "Traveler");
-  const profile =
-    s.session?.user.id === id ? s.profile : posts[0]?.profiles;
   return (
     <div className="narrow-page">
       <div className="card profile-heading">
-        <Avatar name={name} url={profile?.avatar_url} avatarType={profile?.avatar_type} avatarId={profile?.avatar_id} />
+        <Avatar name={name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
         <h1>{name}</h1>
         <p>Public island stories</p>
       </div>

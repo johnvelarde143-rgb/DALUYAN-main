@@ -202,8 +202,8 @@ export function Layout() {
             {unread > 0 && <span>{unread}</span>}
           </Link>
           <Link
-            to={s.session ? `/profiles/${s.session.user.id}` : "/auth"}
-            aria-label={s.session ? "View your profile" : "Sign in"}
+            to={s.session ? "/profile" : "/auth"}
+            aria-label="Your account"
           >
             <Avatar name={s.profile?.display_name ?? "Guest"} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} small />
           </Link>

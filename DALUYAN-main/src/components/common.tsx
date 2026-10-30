@@ -1,10 +1,22 @@
 import { Link } from "react-router-dom";
-import { MapPin, Star, ArrowUpRight, Bookmark } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  ArrowUpRight,
+  Bookmark,
+  Facebook,
+  Globe2,
+  Instagram,
+  Mail,
+  Phone,
+} from "lucide-react";
 import { MorionMask } from "./CulturalArt";
 import type { Listing } from "../lib/types";
 import { useStore } from "../lib/store";
 import { Button } from "./ui/button";
 import { profilePicture } from "../lib/avatars";
+import { safeLink } from "../lib/supabase";
+import { listingCover, listingCoverAlt } from "./ListingMedia";
 export function Badge({
   children,
   tone = "neutral",
@@ -88,6 +100,23 @@ export function Stars({
 }
 export function ListingCard({ listing: l }: { listing: Listing }) {
   const s = useStore();
+  const contactLabels: Record<string, string> = {
+    website: "Website",
+    facebook: "Facebook",
+    instagram: "Instagram",
+    email: "Email",
+    phone: "Call",
+  };
+  const contactIcons: Record<string, React.ReactNode> = {
+    website: <Globe2 size={13} />,
+    facebook: <Facebook size={13} />,
+    instagram: <Instagram size={13} />,
+    email: <Mail size={13} />,
+    phone: <Phone size={13} />,
+  };
+  const contacts = Object.entries(l.contact_links)
+    .filter(([key, value]) => contactLabels[key] && safeLink(value))
+    .slice(0, 3);
   const reviews = s.posts.filter(
     (p) =>
       p.listing_id === l.id &&
@@ -101,9 +130,12 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
     <article className="card listing-card">
       <Link to={"/places/" + l.id} className="listing-image">
         <img
-          src={l.metadata.image || "/landscape-1.svg"}
-          alt={`Illustration for ${l.name}`}
+          src={listingCover(l)}
+          alt={listingCoverAlt(l)}
           loading="lazy"
+          decoding="async"
+          sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw"
+          onError={(event) => { event.currentTarget.src = "/landscape-1.svg"; }}
         />
         <span className="image-tag">{l.metadata.category}</span>
       </Link>
@@ -134,10 +166,28 @@ export function ListingCard({ listing: l }: { listing: Listing }) {
           <h3>{l.name}</h3>
         </Link>
         <p>{l.description}</p>
-        <div className="row between">
+        {contacts.length > 0 && (
+          <div className="listing-contact-links" aria-label={`Contact ${l.name}`}>
+            {contacts.map(([key, value]) => (
+              <a
+                key={key}
+                href={safeLink(value)}
+                target={value.startsWith("http") ? "_blank" : undefined}
+                rel={value.startsWith("http") ? "noreferrer" : undefined}
+                aria-label={`${contactLabels[key]} for ${l.name}`}
+                title={contactLabels[key]}
+              >
+                {contactIcons[key]}
+                <span>{contactLabels[key]}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        <div className="row between listing-card-footer">
           <Badge>{l.metadata.source_label}</Badge>
           <Link to={"/places/" + l.id} aria-label={`Explore ${l.name}`}>
-            <ArrowUpRight size={20} />
+            <span>View ad</span>
+            <ArrowUpRight size={16} />
           </Link>
         </div>
       </div>
