@@ -8,6 +8,13 @@ export const municipalities = [
 ] as const;
 export type Municipality = (typeof municipalities)[number];
 export type Moderation = "published" | "pending" | "rejected";
+export type PostCategory =
+  | "Travel Experience"
+  | "Tourist Spot"
+  | "Cultural Experience"
+  | "Festival"
+  | "Travel Tips";
+export type PostVisibility = "public" | "private";
 export type Listing = {
   id: string;
   owner_id: string | null;
@@ -50,9 +57,20 @@ export type Profile = {
   avatar_url: string | null;
   created_at: string;
   display_role: string | null;
+  username?: string | null;
+  full_name?: string | null;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
+  birthdate?: string | null;
+  gender?: string | null;
+  phone_number?: string | null;
   avatar_type?: "default" | "avatar" | "upload" | null;
   avatar_id?: string | null;
   avatar_storage_path?: string | null;
+  travel_styles?: string[] | null;
+  preferred_activities?: string[] | null;
+  travel_budget?: string | null;
 };
 export type Post = {
   id: string;
@@ -67,6 +85,7 @@ export type Post = {
   moderation_status: Moderation;
   municipality: Municipality;
   category: string | null;
+  visibility?: PostVisibility;
   feedback_status: string | null;
   created_at: string;
   profiles?: Pick<Profile, "display_name" | "avatar_url" | "avatar_type" | "avatar_id">;
