@@ -148,3 +148,50 @@ test("mobile drawer active routes, outside click, Escape and no horizontal overf
     fullPage: true,
   });
 });
+
+test("town stories scroll, feed stacks and reduced motion stays accessible", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.locator(".town-story")).toHaveCount(6);
+    await expect(page.locator(".feed-welcome .button")).toBeVisible();
+    await expect(page.locator(".story-mosaic")).toHaveCSS(
+      "flex-direction",
+      "column",
+    );
+    await page
+      .getByRole("button", { name: "Show stories from Torrijos", exact: true })
+      .scrollIntoViewIfNeeded();
+    await page
+      .getByRole("button", { name: "Show stories from Torrijos", exact: true })
+      .click();
+    await expect(page.locator(".post-card")).toHaveCount(2);
+    await page.getByRole("button", { name: "All towns", exact: true }).click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await expect(
+      page.getByRole("button", { name: "All towns", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+  }
+  await page.goto("/notifications");
+  await expect(page.locator(".empty-mask")).toBeVisible();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Share a story", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Share a story", exact: true }),
+  ).toBeFocused();
+  const animation = await page
+    .locator(".feed-welcome .button")
+    .evaluate((el) => getComputedStyle(el, "::after").animationName);
+  expect(animation).toBe("none");
+});

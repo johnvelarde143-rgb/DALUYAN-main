@@ -29,6 +29,8 @@ const Admin = lazy(() =>
 );
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
+import "./design-system.css";
+import "./social-theme.css";
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { MapPin, Star, ArrowUpRight, Bookmark, CloudSun } from "lucide-react";
+import { MapPin, Star, ArrowUpRight, Bookmark } from "lucide-react";
+import { MorionMask } from "./CulturalArt";
 import type { Listing } from "../lib/types";
 import { useStore } from "../lib/store";
 import { Button } from "./ui/button";
@@ -22,8 +23,12 @@ export function Avatar({
   small?: boolean;
 }) {
   return (
-    <span className={"avatar " + (small ? "avatar-sm" : "")}>
-      {url ? <img src={url} alt="" /> : name.charAt(0).toUpperCase()}
+    <span
+      className={"avatar " + (small ? "avatar-sm" : "")}
+      role="img"
+      aria-label={name}
+    >
+      {url ? <img src={url} alt="" /> : <MorionMask />}
     </span>
   );
 }
@@ -36,7 +41,7 @@ export function Empty({
 }) {
   return (
     <div className="empty-state">
-      <CloudSun size={32} />
+      <MorionMask className="empty-mask" />
       <h3>{title}</h3>
       {children && <p>{children}</p>}
     </div>
@@ -45,9 +50,8 @@ export function Empty({
 export function Skeleton() {
   return (
     <div className="card skeleton" aria-label="Loading content" role="status">
-      <div />
-      <div />
-      <div />
+      <MorionMask className="loading-mask" />
+      <span>Gathering island stories…</span>
     </div>
   );
 }
