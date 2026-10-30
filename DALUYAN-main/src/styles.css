@@ -3112,6 +3112,52 @@ footer a {
 .widget-content .chat-header {
   padding: 14px;
 }
+.post-media-carousel {
+  position: relative;
+  overflow: hidden;
+  background: #edf1f2;
+  aspect-ratio: 4 / 3;
+  outline: none;
+}
+.post-media-carousel:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.post-media-carousel > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.carousel-control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  color: white;
+  background: rgba(0,0,0,.55);
+  cursor: pointer;
+}
+.carousel-prev { left: 10px; }
+.carousel-next { right: 10px; }
+.carousel-counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  color: white;
+  background: rgba(0,0,0,.55);
+  font-size: 11px;
+}
+.carousel-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  display: flex;
+  gap: 5px;
+  transform: translateX(-50%);
+}
+.carousel-dots button { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.6); cursor: pointer; }
+.carousel-dots button.active { background: white; transform: scale(1.25); }
+.upload-preview-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
 .media-verification-card,
 .listing-media-gallery {
   display: grid;

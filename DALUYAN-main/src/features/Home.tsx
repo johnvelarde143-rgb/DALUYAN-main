@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ImagePlus,
@@ -13,6 +13,8 @@ import {
   Pencil,
   Trash2,
   Send,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useStore } from "../lib/store";
 import { rankFeed } from "../lib/intelligence";
@@ -176,8 +178,13 @@ export function Composer({
             <div className="card preview-post">
               <Badge>Preview</Badge>
               <p>{body}</p>
-              {files.map((f) => (
-                <PreviewImage key={f.name} file={f} />
+              {files.map((f, index) => (
+                <div className="upload-preview-wrap" key={`${f.name}-${index}`}>
+                  <PreviewImage file={f} />
+                  <button type="button" className="text-link" onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}>
+                    Remove
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -207,6 +214,45 @@ function PreviewImage({ file }: { file: File }) {
       onLoad={() => URL.revokeObjectURL(url)}
       alt="Selected photograph preview"
     />
+  );
+}
+
+function PostMediaCarousel({ urls, fictional, municipality }: { urls: string[]; fictional?: boolean; municipality: string }) {
+  const [index, setIndex] = useState(0);
+  const touchStart = useRef<number | null>(null);
+  const move = (delta: number) => setIndex((current) => (current + delta + urls.length) % urls.length);
+  const source = fictional ? `/textile-${(municipality.length % 3) + 1}.svg` : urls[index];
+  return (
+    <div
+      className="post-media-carousel"
+      role="region"
+      aria-label={`Post photo ${index + 1} of ${urls.length}`}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") move(-1);
+        if (event.key === "ArrowRight") move(1);
+      }}
+      onTouchStart={(event) => { touchStart.current = event.changedTouches[0]?.clientX ?? null; }}
+      onTouchEnd={(event) => {
+        if (touchStart.current === null) return;
+        const distance = (event.changedTouches[0]?.clientX ?? touchStart.current) - touchStart.current;
+        if (Math.abs(distance) > 36) move(distance < 0 ? 1 : -1);
+        touchStart.current = null;
+      }}
+      tabIndex={0}
+    >
+      <img
+        src={source}
+        alt={fictional ? "Original Philippine textile-inspired geometric illustration, not a destination photograph" : `Travel photograph ${index + 1} of ${urls.length}`}
+        loading="lazy"
+        onError={(event) => { event.currentTarget.src = "/landscape-1.svg"; }}
+      />
+      {urls.length > 1 && <>
+        <button type="button" className="carousel-control carousel-prev" aria-label="Previous photo" onClick={() => move(-1)}><ChevronLeft size={20} /></button>
+        <button type="button" className="carousel-control carousel-next" aria-label="Next photo" onClick={() => move(1)}><ChevronRight size={20} /></button>
+        <span className="carousel-counter">{index + 1} / {urls.length}</span>
+        <div className="carousel-dots" aria-label="Choose a photo">{urls.map((url, dotIndex) => <button key={url + dotIndex} type="button" className={dotIndex === index ? "active" : ""} aria-label={`Show photo ${dotIndex + 1}`} onClick={() => setIndex(dotIndex)} />)}</div>
+      </>}
+    </div>
   );
 }
 export function PostCard({
@@ -291,24 +337,7 @@ export function PostCard({
       {p.post_type === "review" && <Stars value={p.rating ?? 0} />}
       <p className="post-text">{p.body}</p>
       {p.media_urls.length > 0 && (
-        <div className={"post-media media-" + p.media_urls.length}>
-          {p.media_urls.map((src, i) => (
-            <img
-              key={src}
-              src={
-                p.fictional
-                  ? `/textile-${(p.municipality.length % 3) + 1}.svg`
-                  : src
-              }
-              alt={
-                p.fictional
-                  ? "Original Philippine textile-inspired geometric illustration, not a destination photograph"
-                  : `Travel photograph ${i + 1}`
-              }
-              loading="lazy"
-            />
-          ))}
-        </div>
+        <PostMediaCarousel urls={p.media_urls} fictional={p.fictional} municipality={p.municipality} />
       )}
       {l && (
         <div className="post-place">
@@ -729,10 +758,11 @@ export function ProfilePage() {
   const name =
     posts[0]?.profiles?.display_name ??
     (s.session?.user.id === id ? s.profile?.display_name : "Traveler");
+  const authorProfile = posts[0]?.profiles;
   return (
     <div className="narrow-page">
       <div className="card profile-heading">
-        <Avatar name={name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
+        <Avatar name={name} url={authorProfile?.avatar_url ?? (s.session?.user.id === id ? s.profile?.avatar_url : null)} avatarType={authorProfile?.avatar_type ?? (s.session?.user.id === id ? s.profile?.avatar_type : null)} avatarId={authorProfile?.avatar_id ?? (s.session?.user.id === id ? s.profile?.avatar_id : null)} />
         <h1>{name}</h1>
         <p>Public island stories</p>
       </div>
