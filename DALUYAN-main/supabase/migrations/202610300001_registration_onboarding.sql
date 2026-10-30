@@ -75,3 +75,28 @@ with check(bucket_id='avatars' and (storage.foldername(name))[1]=auth.uid()::tex
 create or replace function public.touch_profile() returns trigger language plpgsql as $$ begin new.updated_at=now(); return new; end $$;
 drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles for each row execute function public.touch_profile();
+
+create table if not exists public.rini_conversations (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null check(char_length(title) between 1 and 120),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create table if not exists public.rini_messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.rini_conversations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null check(role in ('user','assistant')),
+  content text not null check(char_length(content) between 1 and 20000),
+  sources jsonb not null default '[]',
+  intent text,
+  grounded boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.rini_conversations enable row level security;
+alter table public.rini_messages enable row level security;
+create policy rini_conversations_own on public.rini_conversations for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy rini_messages_own on public.rini_messages for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid() and exists(select 1 from public.rini_conversations c where c.id=conversation_id and c.user_id=auth.uid()));
+grant select, insert, update, delete on public.rini_conversations, public.rini_messages to authenticated;
+create index if not exists rini_messages_conversation_created on public.rini_messages(conversation_id, created_at);

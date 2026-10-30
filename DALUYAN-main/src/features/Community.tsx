@@ -1,10 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, Navigate } from "react-router-dom";
 import {
   Bell,
   CheckCheck,
+  Copy,
+  History,
+  Plus,
+  RefreshCw,
   Send,
   Sparkles,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
   ClipboardList,
   ShieldCheck,
   ExternalLink,
@@ -18,7 +25,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useStore } from "../lib/store";
-import { backend, safeLink } from "../lib/supabase";
+import { backend, configured, safeLink } from "../lib/supabase";
 import {
   answerRini,
   feedbackCategory,
@@ -139,10 +146,10 @@ type ChatMessage = {
   id: string;
   role: "assistant" | "user";
   text: string;
-  sources?: { name: string; url: string }[];
+  sources?: { name: string; url: string; publisher?: string; date?: string }[];
   action?: string;
 };
-export function Rini() {
+export function RiniLegacy() {
   const s = useStore();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -268,6 +275,53 @@ export function Rini() {
       </div>
     </div>
   );
+}
+type RiniSource = { name: string; url: string; publisher?: string; date?: string };
+type SmartChatMessage = ChatMessage & { verified?: boolean; intent?: string; sources?: RiniSource[] };
+function SmartMessage({ message, onCopy, onRegenerate }: { message: SmartChatMessage; onCopy: () => void; onRegenerate?: () => void }) {
+  return <div className={`message ${message.role}`}>
+    <span className="message-label">{message.role === "user" ? "You" : "RINI"}</span>
+    <p className="message-text">{message.text}</p>
+    {message.verified && <small className="verified-label">Information verified from available sources.</small>}
+    {message.sources?.length ? <details className="sources-panel"><summary>Sources &amp; References ({message.sources.length})</summary>{message.sources.map((source) => <a className="source-link" href={safeLink(source.url)} key={source.url} target="_blank" rel="noreferrer"><ExternalLink size={13} />{source.name}{source.publisher ? ` · ${source.publisher}` : ""}</a>)}</details> : null}
+    {message.role === "assistant" && <div className="message-tools"><button type="button" aria-label="Copy response" onClick={onCopy}><Copy size={13} /></button>{onRegenerate && <button type="button" aria-label="Regenerate response" onClick={onRegenerate}><RefreshCw size={13} /></button>}<button type="button" aria-label="Helpful"><ThumbsUp size={13} /></button><button type="button" aria-label="Not helpful"><ThumbsDown size={13} /></button></div>}
+  </div>;
+}
+export function Rini() {
+  const s = useStore();
+  const [conversationId, setConversationId] = useState(() => crypto.randomUUID());
+  const [messages, setMessages] = useState<SmartChatMessage[]>([{ id: "welcome", role: "assistant", text: "Mabuhay! I’m RINI, your Marinduque tourism companion. Ask me about destinations, culture, routes, budgets, safety, or current travel information.", verified: false }]);
+  const [input, setInput] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [historyOpen, setHistoryOpen] = useState(false); const abortRef = useRef<AbortController | null>(null);
+  async function ask(text: string, retryText?: string) {
+    const question = text.trim(); if (!question || busy) return;
+    setMessages((old) => [...old, { id: crypto.randomUUID(), role: "user", text: question }]); setInput(""); setBusy(true); setError("");
+    try {
+      let result: SmartChatMessage;
+      if (configured) {
+        const response = await backend().functions.invoke("rini-chat", { body: { conversationId, message: question, previousMessages: messages.slice(-8).map(({ role, text: value }) => ({ role, text: value })) } });
+        if (response.error) throw response.error;
+        result = { id: crypto.randomUUID(), role: "assistant", text: String(response.data?.text ?? "I could not produce a grounded answer."), sources: Array.isArray(response.data?.sources) ? response.data.sources : [], verified: Boolean(response.data?.verified), intent: response.data?.intent };
+      } else {
+        const fallback = answerRini(question, s.listings); result = { id: crypto.randomUUID(), role: "assistant", ...fallback, verified: false };
+      }
+      setMessages((old) => [...old, result]);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "RINI could not reach the research service."); setMessages((old) => [...old, { id: crypto.randomUUID(), role: "assistant", text: "I’m unable to reach the research service right now. Please try again, or use DALUYAN’s verified destination records while the connection is restored.", verified: false }]); }
+    finally { setBusy(false); abortRef.current = null; }
+    void retryText;
+  }
+  function newConversation() { abortRef.current?.abort(); setConversationId(crypto.randomUUID()); setMessages([{ id: "welcome-" + crypto.randomUUID(), role: "assistant", text: "New conversation started. What would you like to discover in Marinduque?" }]); setError(""); }
+  const lastQuestion = [...messages].reverse().find((message) => message.role === "user")?.text;
+  return <div className="page rini-page"><PageTitle eyebrow="RINI · YOUR ISLAND COMPANION" title="A good journey starts with a question." description="Research-powered answers with source links, verified DALUYAN records, and transparent uncertainty." /><div className="card chat">
+    <div className="chat-header"><span className="rini-icon"><Sparkles /></span><div><h3>RINI</h3><small>Marinduque research assistant · English, Filipino, and Taglish</small></div><Badge tone="success">Here to help</Badge></div>
+    <div className="rini-toolbar"><button type="button" className="text-link" onClick={newConversation}><Plus size={14} />New conversation</button><button type="button" className="text-link" onClick={() => setHistoryOpen(!historyOpen)}><History size={14} />{historyOpen ? "Hide history" : "Conversation history"}</button></div>
+    {historyOpen && <div className="rini-history"><p className="muted">Conversation history is associated with your signed-in account when the RINI Edge Function is configured. This session is not uploaded in preview mode.</p></div>}
+    <div className="messages" role="log" aria-live="polite" aria-label="Conversation with RINI">{messages.map((message) => <SmartMessage key={message.id} message={message} onCopy={() => void navigator.clipboard?.writeText(message.text)} onRegenerate={message.role === "assistant" && lastQuestion ? () => void ask(lastQuestion) : undefined} />)}{busy && <div className="message assistant" role="status">RINI is researching trusted sources…</div>}</div>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <div className="chat-suggestions">{["Explore Marinduque destinations", "Plan a budget-friendly trip", "Explain Moriones Festival", "Find official weather and safety sources", "Recommend family-friendly places", "Anong magandang puntahan para sa photography?"].map((question) => <button key={question} disabled={busy} onClick={() => void ask(question)}>{question}</button>)}</div>
+    <form className="chat-input" onSubmit={(event) => { event.preventDefault(); void ask(input); }}><input aria-label="Message RINI" placeholder="Ask about a place, a plan, or a local experience…" value={input} maxLength={2000} onChange={(event) => setInput(event.target.value)} /><Button size="icon" aria-label="Send message to RINI" disabled={busy || !input.trim()}><Send size={18} /></Button></form>
+    {busy && <button type="button" className="stop-rini" onClick={() => abortRef.current?.abort()}><Square size={13} /> Stop generation</button>}
+    <small className="chat-disclaimer">RINI distinguishes retrieved facts from recommendations. Fees, access, schedules, and safety conditions should still be confirmed with the cited source.</small>
+  </div></div>;
 }
 export function Feedback() {
   const s = useStore();
