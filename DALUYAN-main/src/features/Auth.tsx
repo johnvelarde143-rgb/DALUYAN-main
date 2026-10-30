@@ -1063,7 +1063,6 @@ function RegisterWizard({
             disabled={
               busy ||
               !data.terms ||
-              !configured ||
               (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken)
             }
             onClick={createAccount}
@@ -1170,12 +1169,6 @@ export function Auth() {
                   ? "Choose a new password"
                   : "Welcome back."}
         </h1>
-        {!configured && (
-          <p className="notice">
-            Account services are unavailable in public preview. Configure
-            Supabase to enable real authentication.
-          </p>
-        )}
         {message && (
           <p className="notice" role="status">
             {message}
@@ -1375,7 +1368,6 @@ export function Auth() {
               )}
               <Button
                 disabled={
-                  !configured ||
                   busy ||
                   (!!import.meta.env.VITE_TURNSTILE_SITE_KEY && !token)
                 }
@@ -1399,7 +1391,7 @@ export function Auth() {
                 <div className="auth-divider">or continue with</div>
                 <Button
                   variant="outline"
-                  disabled={!configured || busy}
+                  disabled={busy}
                   onClick={() =>
                     void s.run(async () => {
                       const { error } = await backend().auth.signInWithOAuth({
