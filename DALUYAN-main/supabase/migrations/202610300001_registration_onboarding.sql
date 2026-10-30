@@ -12,7 +12,14 @@ alter table public.profiles
   add column if not exists avatar_id text,
   add column if not exists avatar_storage_path text,
   add column if not exists travel_styles text[] not null default '{}',
+  add column if not exists preferred_activities text[] not null default '{}',
+  add column if not exists travel_budget text,
   add column if not exists recommendations_consent boolean not null default true,
+  add column if not exists terms_version text,
+  add column if not exists terms_accepted_at timestamptz,
+  add column if not exists privacy_version text,
+  add column if not exists recommendations_consent_at timestamptz,
+  add column if not exists recommendations_withdrawn_at timestamptz,
   add column if not exists updated_at timestamptz not null default now();
 
 alter table public.profiles drop constraint if exists profiles_username_format;
@@ -41,9 +48,9 @@ create or replace function public.new_profile() returns trigger
 language plpgsql security definer set search_path=public as $$
 declare meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb); item text;
 begin
-  insert into public.profiles(id, display_name, username, full_name, first_name, middle_name, last_name, birthdate, gender, phone_number, avatar_type, avatar_id, travel_styles, recommendations_consent)
-  values(new.id, left(coalesce(nullif(meta->>'display_name',''),'Traveler'),80), lower(nullif(meta->>'username','')), nullif(meta->>'full_name',''), nullif(meta->>'first_name',''), nullif(meta->>'middle_name',''), nullif(meta->>'last_name',''), nullif(meta->>'birthdate','')::date, nullif(meta->>'gender',''), nullif(meta->>'phone_number',''), coalesce(nullif(meta->>'avatar_type',''),'default'), nullif(meta->>'avatar_id',''), coalesce(array(select jsonb_array_elements_text(coalesce(meta->'travel_styles','[]'::jsonb))), '{}'), coalesce((meta->>'recommendations')::boolean, true))
-  on conflict(id) do update set display_name=excluded.display_name, username=excluded.username, full_name=excluded.full_name, first_name=excluded.first_name, middle_name=excluded.middle_name, last_name=excluded.last_name, birthdate=excluded.birthdate, gender=excluded.gender, phone_number=excluded.phone_number, avatar_type=excluded.avatar_type, avatar_id=excluded.avatar_id, travel_styles=excluded.travel_styles, recommendations_consent=excluded.recommendations_consent, updated_at=now();
+  insert into public.profiles(id, display_name, username, full_name, first_name, middle_name, last_name, birthdate, gender, phone_number, avatar_type, avatar_id, travel_styles, preferred_activities, travel_budget, recommendations_consent, terms_version, terms_accepted_at, privacy_version, recommendations_consent_at)
+  values(new.id, left(coalesce(nullif(meta->>'display_name',''),'Traveler'),80), lower(nullif(meta->>'username','')), nullif(meta->>'full_name',''), nullif(meta->>'first_name',''), nullif(meta->>'middle_name',''), nullif(meta->>'last_name',''), nullif(meta->>'birthdate','')::date, nullif(meta->>'gender',''), nullif(meta->>'phone_number',''), coalesce(nullif(meta->>'avatar_type',''),'default'), nullif(meta->>'avatar_id',''), coalesce(array(select jsonb_array_elements_text(coalesce(meta->'travel_styles','[]'::jsonb))), '{}'), coalesce(array(select jsonb_array_elements_text(coalesce(meta->'activities','[]'::jsonb))), '{}'), nullif(meta->>'budget',''), coalesce((meta->>'recommendations')::boolean, false), nullif(meta->>'terms_version',''), case when coalesce((meta->>'terms_accepted')::boolean,false) then now() end, nullif(meta->>'privacy_version',''), case when coalesce((meta->>'recommendations')::boolean,false) then now() end)
+  on conflict(id) do update set display_name=excluded.display_name, username=excluded.username, full_name=excluded.full_name, first_name=excluded.first_name, middle_name=excluded.middle_name, last_name=excluded.last_name, birthdate=excluded.birthdate, gender=excluded.gender, phone_number=excluded.phone_number, avatar_type=excluded.avatar_type, avatar_id=excluded.avatar_id, travel_styles=excluded.travel_styles, preferred_activities=excluded.preferred_activities, travel_budget=excluded.travel_budget, recommendations_consent=excluded.recommendations_consent, terms_version=excluded.terms_version, terms_accepted_at=excluded.terms_accepted_at, privacy_version=excluded.privacy_version, recommendations_consent_at=excluded.recommendations_consent_at, updated_at=now();
   insert into public.user_roles(user_id) values(new.id) on conflict(user_id) do nothing;
   for item in select jsonb_array_elements_text(coalesce(meta->'spots','[]'::jsonb)) loop insert into public.profile_interests values(new.id,'spot',item) on conflict do nothing; end loop;
   for item in select jsonb_array_elements_text(coalesce(meta->'hobbies','[]'::jsonb)) loop insert into public.profile_interests values(new.id,'hobby',item) on conflict do nothing; end loop;
