@@ -29,6 +29,13 @@ const Admin = lazy(() =>
 );
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
+
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js");
+  });
+}
+
 const MapPage = lazy(() =>
   import("./features/Map").then((m) => ({ default: m.MapPage })),
 );
