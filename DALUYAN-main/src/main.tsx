@@ -49,13 +49,10 @@ function ScrollToTop() {
   return null;
 }
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { authReady, registrationChecked, registrationComplete, isAdmin, session } = useStore();
+  const { authReady, session } = useStore();
   const location = useLocation();
   if (!authReady) return <Skeleton />;
   if (!session) return <Navigate to="/auth" replace state={{ from: location }} />;
-  if (!registrationChecked) return <Skeleton />;
-  if (!registrationComplete && !isAdmin)
-    return <Navigate to="/auth?mode=register" replace state={{ from: location }} />;
   return <>{children}</>;
 }
 class ErrorBoundary extends React.Component<
@@ -89,7 +86,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Suspense fallback={<Skeleton />}>
             <Routes>
               <Route path="auth" element={<Auth />} />
-              <Route path="register" element={<Auth />} />
               <Route
                 element={
                   <RequireAuth>

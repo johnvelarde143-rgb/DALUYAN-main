@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Pencil, ShieldCheck, Waves, X } from "lucide-react";
 import { backend, configured } from "../lib/supabase";
 import { useStore } from "../lib/store";
-import { Badge, PageTitle, Avatar, AuthPrompt, Skeleton } from "../components/common";
+import { Badge, PageTitle, Avatar, AuthPrompt } from "../components/common";
 import { Button } from "../components/ui/button";
 import { AVATAR_IDS, avatarUrl } from "../lib/avatars";
 type Turnstile = {
@@ -347,11 +347,9 @@ function ReviewSection({
 function RegisterWizard({
   onDone,
   onSwitch,
-  showSwitch = true,
 }: {
   onDone: (message: string) => void;
   onSwitch: () => void;
-  showSwitch?: boolean;
 }) {
   const [data, setData] = useState(initialRegistration);
   const [showPassword, setShowPassword] = useState(false);
@@ -364,21 +362,6 @@ function RegisterWizard({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [usernameState, setUsernameState] = useState("");
-  const s = useStore();
-  const isCompletingAuthenticatedAccount = !!s.session;
-  useEffect(() => {
-    if (!s.session?.user) return;
-    const user = s.session.user;
-    const metadata = user.user_metadata ?? {};
-    setData((old) => ({
-      ...old,
-      email: old.email || user.email || "",
-      firstName: old.firstName || metadata.first_name || "",
-      lastName: old.lastName || metadata.last_name || "",
-      phone: old.phone || metadata.phone_number || "",
-      username: old.username || metadata.username || "",
-    }));
-  }, [s.session]);
   const update = <K extends keyof RegistrationData>(
     key: K,
     value: RegistrationData[K],
@@ -416,9 +399,9 @@ function RegisterWizard({
         !/^\+[1-9]\d{6,14}$/.test(data.phone.replace(/[\s()-]/g, ""))
       )
         return "Use an international phone format such as +639171234567.";
-      if (!isCompletingAuthenticatedAccount && data.password.length < 8)
+      if (data.password.length < 8)
         return "Use at least 8 characters for your password.";
-      if (!isCompletingAuthenticatedAccount && data.password !== data.confirmPassword)
+      if (data.password !== data.confirmPassword)
         return "Passwords do not match.";
     }
     if (step === 2) {
@@ -442,57 +425,44 @@ function RegisterWizard({
         .filter(Boolean)
         .join(" ")
         .trim();
-      const registration = {
-        username: data.username.trim().toLowerCase(),
-        display_name: fullName,
-        full_name: fullName,
-        first_name: data.firstName,
-        middle_name: data.middleName,
-        last_name: data.lastName,
-        birthdate: data.birthdate,
-        gender: data.gender || null,
-        phone_number: data.phone ? data.phone.replace(/[\s()-]/g, "") : null,
-        avatar_type: data.avatarType,
-        avatar_id: data.avatarId,
-        travel_styles: data.travelStyles,
-        spots: data.spots,
-        hobbies: [...data.hobbies, ...(data.otherInterests ? [data.otherInterests] : [])],
-        activities: data.activities,
-        budget: data.budget,
-        recommendations: data.recommendations,
-        terms_accepted: true,
-      };
-      let userId: string | undefined;
-      let hasSession = false;
-      if (isCompletingAuthenticatedAccount) {
-        userId = s.session?.user.id;
-        const { error } = await backend().rpc("complete_registration", {
-          registration: { ...registration, privacy_version: "0.1-draft" },
-        });
-        if (error) throw error;
-        hasSession = true;
-      } else {
-        const { data: result, error: signUpError } = await backend().auth.signUp({
-          email: data.email.trim(),
-          password: data.password,
-          options: {
-            data: registration,
+      const { data: result, error: signUpError } = await backend().auth.signUp({
+        email: data.email.trim(),
+        password: data.password,
+        options: {
+          data: {
+            username: data.username.trim().toLowerCase(),
+            display_name: fullName,
+            full_name: fullName,
+            first_name: data.firstName,
+            middle_name: data.middleName,
+            last_name: data.lastName,
+            birthdate: data.birthdate,
+            gender: data.gender || null,
+            phone_number: data.phone
+              ? data.phone.replace(/[\s()-]/g, "")
+              : null,
+            avatar_type: data.avatarType,
+            avatar_id: data.avatarId,
+            travel_styles: data.travelStyles,
+            spots: data.spots,
+            hobbies: [
+              ...data.hobbies,
+              ...(data.otherInterests ? [data.otherInterests] : []),
+            ],
+            activities: data.activities,
+            budget: data.budget,
+            recommendations: data.recommendations,
+            terms_version: "0.1-draft",
+            privacy_version: "0.1-draft",
+            terms_accepted: true,
+          },
           emailRedirectTo: location.origin + "/auth",
           captchaToken: captchaToken || undefined,
         },
       });
-        if (signUpError) throw signUpError;
-        userId = result.user?.id;
-        hasSession = !!result.session;
-        if (result.session && result.user) {
-          const { error } = await backend().rpc("complete_registration", {
-            registration: { ...registration, privacy_version: "0.1-draft" },
-          });
-          if (error) throw error;
-        }
-      }
-      if (hasSession && userId && data.photo) {
-        const path = `${userId}/${crypto.randomUUID()}.${data.photo.name.split(".").pop()}`;
+      if (signUpError) throw signUpError;
+      if (result.session && result.user && data.photo) {
+        const path = `${result.user.id}/${crypto.randomUUID()}.${data.photo.name.split(".").pop()}`;
         const { error: uploadError } = await backend()
           .storage.from("avatars")
           .upload(path, data.photo, {
@@ -504,11 +474,10 @@ function RegisterWizard({
         await backend()
           .from("profiles")
           .update({ avatar_type: "upload", avatar_storage_path: path, avatar_url })
-          .eq("id", userId);
+          .eq("id", result.user.id);
       }
-      await s.refresh();
       onDone(
-        hasSession
+        result.session
           ? "Your account is ready. Welcome to DALUYAN!"
           : "Registration succeeded, but no session was returned. Turn off Confirm email in Supabase Auth to enable automatic login.",
       );
@@ -576,12 +545,12 @@ function RegisterWizard({
             <small>International country codes are supported.</small>
           </label>
           <div className="wizard-grid">
-            {!isCompletingAuthenticatedAccount && <label>
+            <label>
               Password
               <div className="password-field">
                 <input
                   type={showPassword ? "text" : "password"}
-                  required={!isCompletingAuthenticatedAccount}
+                  required
                   minLength={8}
                   value={data.password}
                   onChange={(e) => update("password", e.target.value)}
@@ -604,8 +573,8 @@ function RegisterWizard({
                     ? "good"
                     : "use 8+ characters"}
               </small>
-            </label>}
-            {!isCompletingAuthenticatedAccount && <label>
+            </label>
+            <label>
               Confirm password
               <div className="password-field">
                 <input
@@ -645,7 +614,7 @@ function RegisterWizard({
                     : "Passwords do not match"}
                 </small>
               )}
-            </label>}
+            </label>
           </div>
         </div>
       )}
@@ -910,8 +879,7 @@ function RegisterWizard({
             </div>
             <ReviewRow label="Username" value={`@${data.username}`} />
             <ReviewRow label="Email address" value={data.email} />
-              {!isCompletingAuthenticatedAccount && <>
-                <ReviewRow
+            <ReviewRow
               label="Phone number"
               value={data.phone || "Not provided"}
             />
@@ -923,7 +891,6 @@ function RegisterWizard({
               label="Email verification"
               value="Verification email will be sent after account creation"
             />
-              </>}
           </ReviewSection>
           <ReviewSection title="Personal Information" onEdit={() => setStep(2)}>
             <ReviewRow
@@ -1078,14 +1045,12 @@ function RegisterWizard({
           </Button>
         )}
       </div>
-      {showSwitch && (
-        <p className="auth-switch">
-          Already have an account?{" "}
-          <button className="text-link" type="button" onClick={onSwitch}>
-            Sign in
-          </button>
-        </p>
-      )}
+      <p className="auth-switch">
+        Already have an account?{" "}
+        <button className="text-link" type="button" onClick={onSwitch}>
+          Sign in
+        </button>
+      </p>
       {legalDocument && (
         <LegalDocument
           kind={legalDocument}
@@ -1183,21 +1148,7 @@ export function Auth() {
             {message}
           </p>
         )}
-        {s.session && !s.registrationChecked ? (
-          <Skeleton />
-        ) : s.session && !s.registrationComplete && mode !== "recovery" ? (
-          <>
-            <p className="notice" role="status">
-              Welcome to DALUYAN! Before you begin exploring Marinduque, please
-              complete your registration to personalize your tourism experience.
-            </p>
-            <RegisterWizard
-              onDone={setMessage}
-              onSwitch={() => void backend().auth.signOut()}
-              showSwitch={false}
-            />
-          </>
-        ) : s.session && !needsMfa && mode !== "recovery" ? (
+        {s.session && !needsMfa && mode !== "recovery" ? (
           <>
             <p>You are signed in{s.aal === "aal2" ? " with MFA" : ""}.</p>
             <Button asChild>
