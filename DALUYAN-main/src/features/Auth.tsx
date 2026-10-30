@@ -871,7 +871,12 @@ function RegisterWizard({
               </p>
             </div>
           </div>
+          <div className="review-details">
           <ReviewSection title="Account Information" onEdit={() => setStep(1)}>
+            <div className="review-photo-row">
+              <span>Profile picture</span>
+              {data.avatarType === "upload" && data.photoUrl ? <img src={data.photoUrl} alt="Selected profile preview" /> : <img src={avatarUrl(data.avatarId) ?? ""} alt="Selected illustrated avatar" />}
+            </div>
             <ReviewRow label="Username" value={`@${data.username}`} />
             <ReviewRow label="Email address" value={data.email} />
             <ReviewRow
@@ -933,38 +938,7 @@ function RegisterWizard({
               value={data.budget || "Not specified"}
             />
           </ReviewSection>
-          {data.recommendations && (
-            <section className="review-section">
-              <h3>Personalization Summary</h3>
-              <p>
-                DALUYAN will use your selected{" "}
-                {data.spots.length
-                  ? `spots (${data.spots.slice(0, 2).join(" and ")})`
-                  : "tourist interests"}
-                {data.hobbies.length
-                  ? `, hobbies such as ${data.hobbies.slice(0, 2).join(" and ")}`
-                  : ""}
-                {data.travelStyles.length
-                  ? `, and ${data.travelStyles.join(", ")} travel style${data.travelStyles.length > 1 ? "s" : ""}`
-                  : ""}{" "}
-                to prioritize relevant destination records and experiences for
-                you.
-              </p>
-            </section>
-          )}
-          <p>
-            <b>Profile</b>
-            <br />
-            {data.birthdate} · {age || "Age pending"} ·{" "}
-            {data.gender || "Gender private"}
-          </p>
-          <p>
-            <b>Discovering</b>
-            <br />
-            {data.spots.length
-              ? data.spots.join(" · ")
-              : "Preferences skipped for now"}
-          </p>
+          </div>
           <section className="review-section consent-section">
             <h3>Before You Create Your Account</h3>
             <p className="muted">
