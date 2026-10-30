@@ -27,6 +27,8 @@ const Admin = lazy(() =>
 );
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
+import "./design-system.css";
+import "./social-theme.css";
 const MapPage = lazy(() =>
   import("./features/Map").then((m) => ({ default: m.MapPage })),
 );

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../lib/store";
 import { configured, backend } from "../lib/supabase";
+import { Butterfly, WaveDivider } from "./CulturalArt";
 import { Avatar, Skeleton } from "./common";
 import { Modal } from "./ui/dialog";
 import { Button } from "./ui/button";
@@ -228,8 +229,11 @@ export function Layout() {
         <main id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
+        <WaveDivider />
         <footer>
-          DALUYAN{" "}
+          <strong className="footer-brand">
+            DALUYAN<small>ROOTED IN MARINDUQUE</small>
+          </strong>{" "}
           <span>
             Explore Marinduque. Share Your Journey. Shape Better Tourism.
           </span>
@@ -253,6 +257,7 @@ export function Layout() {
       </Modal>
       {s.toast && (
         <div className="toast" role="status">
+          <Butterfly className="success-butterfly" />
           {s.toast}
           <button
             aria-label="Dismiss notification"

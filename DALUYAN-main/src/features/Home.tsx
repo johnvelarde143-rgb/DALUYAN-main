@@ -28,6 +28,7 @@ import {
   Stars,
   dateTime,
 } from "../components/common";
+import { Butterfly } from "../components/CulturalArt";
 import { Weather } from "../components/Weather";
 export function Composer({
   open,
@@ -292,10 +293,14 @@ export function PostCard({
           {p.media_urls.map((src, i) => (
             <img
               key={src}
-              src={src}
+              src={
+                p.fictional
+                  ? `/textile-${(p.municipality.length % 3) + 1}.svg`
+                  : src
+              }
               alt={
                 p.fictional
-                  ? "Original landscape illustration, not a destination photograph"
+                  ? "Original Philippine textile-inspired geometric illustration, not a destination photograph"
                   : `Travel photograph ${i + 1}`
               }
               loading="lazy"
@@ -514,65 +519,49 @@ export function Home() {
   return (
     <div className="home-grid">
       <div className="home-center">
-        <section className="hero">
-          <div className="hero-art" />
-          <div className="hero-content">
-            <div className="hero-kicker">
-              <span /> THE HEART OF THE PHILIPPINES
-            </div>
+        <section className="town-stories" aria-label="Marinduque town stories">
+          <div className="stories-title">
+            <span className="eyebrow">SIX TOWNS. ENDLESS CONNECTIONS.</span>
+            <Link className="text-link" to="/discover">
+              Explore all <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          <div className="stories-track">
+            {municipalities.map((town, i) => (
+              <button
+                key={town}
+                className="town-story"
+                aria-label={`Show stories from ${town}`}
+                aria-pressed={municipality === town}
+                onClick={() => {
+                  setMunicipality(town);
+                  setLimit(6);
+                }}
+              >
+                <span className="story-ring">
+                  <span className={`story-art story-art-${i % 3}`}>
+                    <span>{town.slice(0, 2).toUpperCase()}</span>
+                  </span>
+                </span>
+                <span>{town}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="feed-welcome">
+          <div>
+            <span className="eyebrow">YOUR DAILY DOSE OF ISLAND LIFE</span>
             <h1>
               Find your place.
               <br />
-              Share your <em>journey.</em>
+              Share your journey.
             </h1>
-            <p>
-              Six towns. Countless stories.
-              <br />
-              Discover the island through the people who call it home.
-            </p>
-            <Button asChild>
-              <Link to="/map">
-                Explore Marinduque <ArrowUpRight size={17} />
-              </Link>
-            </Button>
+            <p>Small moments. Local voices. A little closer to Marinduque.</p>
           </div>
-          <span className="hero-caption">
-            13.4469° N, 121.8396° E · MARINDUQUE
-            <br />
-            Original island illustration
-          </span>
-        </section>
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">A LITTLE ISLAND INSPIRATION</span>
-            <h2>Where will the day take you?</h2>
-          </div>
-          <Link className="text-link" to="/discover">
-            All places <ArrowUpRight size={16} />
+          <Link className="button button-outline" to="/map">
+            Explore the island <ArrowUpRight size={16} />
           </Link>
-        </div>
-        <div className="discovery-strip">
-          {s.listings
-            .filter((l) => l.listing_type === "destination")
-            .slice(0, 3)
-            .map((l) => (
-              <Link
-                key={l.id}
-                to={"/places/" + l.id}
-                className="discovery-tile"
-              >
-                <img
-                  src={l.metadata.image}
-                  alt="Original landscape illustration"
-                />
-                <span>
-                  <small>{l.municipality}</small>
-                  <strong>{l.name}</strong>
-                </span>
-                <ArrowUpRight size={17} />
-              </Link>
-            ))}
-        </div>
+        </section>
         <div className="card compose-prompt">
           <div className="row">
             <Avatar name={s.profile?.display_name ?? "Guest"} />
@@ -611,6 +600,7 @@ export function Home() {
           {["", ...municipalities].map((m) => (
             <button
               key={m}
+              aria-pressed={municipality === m}
               className={municipality === m ? "active" : ""}
               onClick={() => {
                 setMunicipality(m);
@@ -625,15 +615,17 @@ export function Home() {
           Ranked by recency, place relevance, genuine engagement and content
           quality. Reported content is excluded.
         </p>
-        {s.loading ? (
-          <Skeleton />
-        ) : feed.length ? (
-          feed.slice(0, limit).map((p) => <PostCard key={p.id} post={p} />)
-        ) : (
-          <Empty title="A story is waiting to be shared">
-            Be the first to share from this municipality.
-          </Empty>
-        )}
+        <div className="story-mosaic" aria-label="Island community stories">
+          {s.loading ? (
+            <Skeleton />
+          ) : feed.length ? (
+            feed.slice(0, limit).map((p) => <PostCard key={p.id} post={p} />)
+          ) : (
+            <Empty title="A story is waiting to be shared">
+              Be the first to share from this municipality.
+            </Empty>
+          )}
+        </div>
         {feed.length > limit && (
           <Button
             variant="outline"
@@ -682,13 +674,19 @@ export function Home() {
             <br />
             Leave a positive mark.
           </h3>
-          <p>Choose local. Respect culture. Take your litter home.</p>
+          <ul className="butterfly-list">
+            <li>Choose local.</li>
+            <li>Respect culture.</li>
+            <li>Take your litter home.</li>
+          </ul>
           <Link to="/feedback">
             Help shape better tourism <ArrowUpRight size={16} />
           </Link>
         </section>
         <div className="rini-promo">
-          <span className="rini-icon">✦</span>
+          <span className="rini-icon">
+            <Butterfly />
+          </span>
           <h3>A little help from RINI</h3>
           <p>Your source-grounded island companion, one question away.</p>
           <Link to="/rini">
