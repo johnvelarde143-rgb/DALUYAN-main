@@ -96,6 +96,8 @@ create table if not exists public.rini_messages (
 );
 alter table public.rini_conversations enable row level security;
 alter table public.rini_messages enable row level security;
+drop policy if exists rini_conversations_own on public.rini_conversations;
+drop policy if exists rini_messages_own on public.rini_messages;
 create policy rini_conversations_own on public.rini_conversations for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
 create policy rini_messages_own on public.rini_messages for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid() and exists(select 1 from public.rini_conversations c where c.id=conversation_id and c.user_id=auth.uid()));
 grant select, insert, update, delete on public.rini_conversations, public.rini_messages to authenticated;
