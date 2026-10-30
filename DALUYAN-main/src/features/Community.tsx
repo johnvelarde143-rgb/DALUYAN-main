@@ -288,9 +288,35 @@ function SmartMessage({ message, onCopy, onRegenerate }: { message: SmartChatMes
   </div>;
 }
 export function Rini() {
+  const s = useStore();
   const [conversationId, setConversationId] = useState(() => crypto.randomUUID());
   const [messages, setMessages] = useState<SmartChatMessage[]>([{ id: "welcome", role: "assistant", text: "Mabuhay! I’m RINI, your Marinduque tourism companion. Ask me about destinations, culture, routes, budgets, safety, or current travel information.", verified: false }]);
   const [input, setInput] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [historyOpen, setHistoryOpen] = useState(false); const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    if (!historyOpen || !s.session) return;
+    let active = true;
+    void backend().from("rini_messages").select("id,conversation_id,role,content,sources,grounded,intent,created_at").eq("user_id", s.session.user.id).order("created_at", { ascending: true }).limit(100).then(({ data, error: queryError }) => {
+      if (!active) return;
+      if (queryError) {
+        setError(queryError.message);
+        return;
+      }
+      if (data?.length) {
+        const latestConversation = data.filter((message) => message.conversation_id === conversationId);
+        if (latestConversation.length) {
+          setMessages(latestConversation.map((message) => ({
+            id: message.id,
+            role: message.role,
+            text: message.content,
+            sources: Array.isArray(message.sources) ? message.sources as RiniSource[] : [],
+            verified: message.grounded,
+            intent: message.intent ?? undefined,
+          })));
+        }
+      }
+    });
+    return () => { active = false; };
+  }, [conversationId, historyOpen, s.session]);
   async function ask(text: string, retryText?: string) {
     const question = text.trim(); if (!question || busy) return;
     setMessages((old) => [...old, { id: crypto.randomUUID(), role: "user", text: question }]); setInput(""); setBusy(true); setError("");
@@ -309,7 +335,7 @@ export function Rini() {
   return <div className="page rini-page"><PageTitle eyebrow="RINI · YOUR ISLAND COMPANION" title="A good journey starts with a question." description="Research-powered answers with source links, verified DALUYAN records, and transparent uncertainty." /><div className="card chat">
     <div className="chat-header"><span className="rini-icon"><Sparkles /></span><div><h3>RINI</h3><small>Marinduque research assistant · English, Filipino, and Taglish</small></div><Badge tone="success">Here to help</Badge></div>
     <div className="rini-toolbar"><button type="button" className="text-link" onClick={newConversation}><Plus size={14} />New conversation</button><button type="button" className="text-link" onClick={() => setHistoryOpen(!historyOpen)}><History size={14} />{historyOpen ? "Hide history" : "Conversation history"}</button></div>
-    {historyOpen && <div className="rini-history"><p className="muted">Conversation history is associated with your signed-in account.</p></div>}
+    {historyOpen && <div className="rini-history"><p className="muted">Conversation history is associated with your signed-in account and loaded from Supabase.</p></div>}
     <div className="messages" role="log" aria-live="polite" aria-label="Conversation with RINI">{messages.map((message) => <SmartMessage key={message.id} message={message} onCopy={() => void navigator.clipboard?.writeText(message.text)} onRegenerate={message.role === "assistant" && lastQuestion ? () => void ask(lastQuestion) : undefined} />)}{busy && <div className="message assistant" role="status">RINI is researching trusted sources…</div>}</div>
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="chat-suggestions">{["Explore Marinduque destinations", "Plan a budget-friendly trip", "Explain Moriones Festival", "Find official weather and safety sources", "Recommend family-friendly places", "Anong magandang puntahan para sa photography?"].map((question) => <button key={question} disabled={busy} onClick={() => void ask(question)}>{question}</button>)}</div>

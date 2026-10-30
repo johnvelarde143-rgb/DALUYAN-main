@@ -49,7 +49,9 @@ Deno.serve(async (request) => {
   if (!text) return json({ error: "RINI did not receive a grounded answer." }, 502);
   const sources = groundingSources(candidate?.groundingMetadata);
   const verified = sources.length > 0 || records.some((record: any) => text.includes(record.name));
-  await supabase.from("rini_conversations").upsert({ id: conversationId, user_id: userData.user.id, title: message.slice(0, 80), updated_at: new Date().toISOString() });
-  await supabase.from("rini_messages").insert([{ conversation_id: conversationId, user_id: userData.user.id, role: "user", content: message, intent: intent(message) }, { conversation_id: conversationId, user_id: userData.user.id, role: "assistant", content: text, sources, intent: intent(message), grounded: verified }]);
+  const { error: conversationError } = await supabase.from("rini_conversations").upsert({ id: conversationId, user_id: userData.user.id, title: message.slice(0, 80), updated_at: new Date().toISOString() });
+  if (conversationError) return json({ error: "RINI generated an answer but could not save the conversation." }, 500);
+  const { error: messageError } = await supabase.from("rini_messages").insert([{ conversation_id: conversationId, user_id: userData.user.id, role: "user", content: message, intent: intent(message) }, { conversation_id: conversationId, user_id: userData.user.id, role: "assistant", content: text, sources, intent: intent(message), grounded: verified }]);
+  if (messageError) return json({ error: "RINI generated an answer but could not save the messages." }, 500);
   return json({ conversationId, text, sources, verified, intent: intent(message) });
 });
