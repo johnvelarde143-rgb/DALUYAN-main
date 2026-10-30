@@ -4,6 +4,7 @@ import { MorionMask } from "./CulturalArt";
 import type { Listing } from "../lib/types";
 import { useStore } from "../lib/store";
 import { Button } from "./ui/button";
+import { profilePicture } from "../lib/avatars";
 export function Badge({
   children,
   tone = "neutral",
@@ -16,10 +17,14 @@ export function Badge({
 export function Avatar({
   name = "Traveler",
   url,
+  avatarType,
+  avatarId,
   small = false,
 }: {
   name?: string;
   url?: string | null;
+  avatarType?: string | null;
+  avatarId?: string | null;
   small?: boolean;
 }) {
   return (
@@ -28,7 +33,7 @@ export function Avatar({
       role="img"
       aria-label={name}
     >
-      {url ? <img src={url} alt="" /> : <MorionMask />}
+      {profilePicture({ avatar_type: avatarType, avatar_id: avatarId, avatar_url: url }) ? <img src={profilePicture({ avatar_type: avatarType, avatar_id: avatarId, avatar_url: url }) ?? ""} alt="" /> : <MorionMask />}
     </span>
   );
 }

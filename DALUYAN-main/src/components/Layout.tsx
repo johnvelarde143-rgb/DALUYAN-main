@@ -123,7 +123,7 @@ export function Layout() {
                 onClick={() => setOpen(false)}
                 className="row"
               >
-                <Avatar name={s.profile?.display_name} />
+                <Avatar name={s.profile?.display_name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
                 <span>
                   <strong>{s.profile?.display_name ?? "Traveler"}</strong>
                   <small>{s.role}</small>
@@ -205,7 +205,7 @@ export function Layout() {
             to={s.session ? "/settings" : "/auth"}
             aria-label="Your account"
           >
-            <Avatar name={s.profile?.display_name ?? "Guest"} small />
+            <Avatar name={s.profile?.display_name ?? "Guest"} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} small />
           </Link>
         </header>
         {s.needsMfa && (

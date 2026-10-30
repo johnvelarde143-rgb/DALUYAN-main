@@ -5,6 +5,7 @@ import { backend, configured } from "../lib/supabase";
 import { useStore } from "../lib/store";
 import { Badge, PageTitle, Avatar, AuthPrompt } from "../components/common";
 import { Button } from "../components/ui/button";
+import { AVATAR_IDS, avatarUrl } from "../lib/avatars";
 type Turnstile = {
   render: (
     el: HTMLElement,
@@ -53,20 +54,7 @@ function Captcha({ onToken }: { onToken: (token: string) => void }) {
   return import.meta.env.VITE_TURNSTILE_SITE_KEY ? <div ref={ref} /> : null;
 }
 
-const avatarChoices = [
-  "sunrise",
-  "mangrove",
-  "shell",
-  "reef",
-  "canoe",
-  "mountain",
-  "festival",
-  "heritage",
-  "coconut",
-  "tarsier",
-  "compass",
-  "waves",
-];
+const avatarChoices = AVATAR_IDS;
 const spotChoices = [
   ["🏖️", "Beaches and Island Hopping"],
   ["🏔️", "Mountains and Hiking Trails"],
@@ -160,7 +148,7 @@ const initialRegistration: RegistrationData = {
   birthdate: "",
   gender: "",
   avatarType: "default",
-  avatarId: "sunrise",
+  avatarId: "dog",
   photo: null,
   photoUrl: "",
   spots: [],
@@ -482,9 +470,10 @@ function RegisterWizard({
             contentType: data.photo.type,
           });
         if (uploadError) throw uploadError;
+        const avatar_url = backend().storage.from("avatars").getPublicUrl(path).data.publicUrl;
         await backend()
           .from("profiles")
-          .update({ avatar_type: "upload", avatar_storage_path: path })
+          .update({ avatar_type: "upload", avatar_storage_path: path, avatar_url })
           .eq("id", result.user.id);
       }
       onDone(
@@ -693,22 +682,13 @@ function RegisterWizard({
           </label>
           <fieldset>
             <legend>Choose Your Profile Picture</legend>
+            <div className="avatar-picker-heading">
+              <span className="muted">Choose an illustrated companion</span>
+              <span className="avatar-selection-preview">
+                {data.avatarType === "upload" && data.photoUrl ? <img src={data.photoUrl} alt="Selected profile preview" /> : <img src={avatarUrl(data.avatarId) ?? ""} alt="Selected illustrated avatar" />}
+              </span>
+            </div>
             <div className="avatar-choice-row">
-              <button
-                type="button"
-                className={
-                  data.avatarType === "default"
-                    ? "avatar-option selected"
-                    : "avatar-option"
-                }
-                onClick={() => update("avatarType", "default")}
-              >
-                <span className="initial-avatar">
-                  {data.firstName[0] || "D"}
-                  {data.lastName[0] || "L"}
-                </span>
-                Default
-              </button>
               {avatarChoices.map((avatar) => (
                 <button
                   type="button"
@@ -723,10 +703,10 @@ function RegisterWizard({
                     update("avatarId", avatar);
                   }}
                 >
-                  <span className={`illustrated-avatar avatar-${avatar}`}>
-                    {avatar.slice(0, 1).toUpperCase()}
+                  <span className="illustrated-avatar">
+                    <img src={avatarUrl(avatar) ?? ""} alt="" />
+                    {data.avatarType === "avatar" && data.avatarId === avatar && <span className="avatar-check">✓</span>}
                   </span>
-                  <small>{avatar}</small>
                 </button>
               ))}
             </div>
@@ -879,9 +859,8 @@ function RegisterWizard({
         <div className="form-stack">
           <p className="wizard-kicker">REVIEW & CREATE ACCOUNT</p>
           <div className="review-card">
-            <div className="initial-avatar large">
-              {data.firstName[0] || "D"}
-              {data.lastName[0] || "L"}
+            <div className="initial-avatar large review-avatar-preview">
+              {data.avatarType === "upload" && data.photoUrl ? <img src={data.photoUrl} alt="Selected profile preview" /> : <img src={avatarUrl(data.avatarId) ?? ""} alt="Selected illustrated avatar" />}
             </div>
             <div>
               <h3>
@@ -1487,7 +1466,7 @@ export function Settings() {
       <section className="card form-stack">
         <h2>Public profile</h2>
         <div className="row">
-          <Avatar name={s.profile?.display_name} url={s.profile?.avatar_url} />
+          <Avatar name={s.profile?.display_name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
           <label>
             Upload profile picture
             <input
@@ -1500,13 +1479,35 @@ export function Settings() {
                     const avatar_url = await s.upload(file, "avatars");
                     const { error } = await backend()
                       .from("profiles")
-                      .update({ avatar_url })
+                      .update({ avatar_url, avatar_type: "upload", avatar_id: null, avatar_storage_path: null })
                       .eq("id", s.requireUser());
                     if (error) throw error;
                   }, "Avatar updated");
               }}
             />
           </label>
+        </div>
+        <div className="settings-avatar-picker">
+          <span className="muted">Or choose an illustrated avatar</span>
+          <div className="avatar-choice-row">
+            {AVATAR_IDS.map((avatar) => (
+              <button
+                key={avatar}
+                type="button"
+                className={s.profile?.avatar_type === "avatar" && s.profile.avatar_id === avatar ? "avatar-option selected" : "avatar-option"}
+                aria-label="Choose illustrated avatar"
+                onClick={() => void s.run(async () => {
+                  const { error } = await backend().from("profiles").update({ avatar_type: "avatar", avatar_id: avatar, avatar_url: null, avatar_storage_path: null }).eq("id", s.requireUser());
+                  if (error) throw error;
+                }, "Avatar updated")}
+              >
+                <span className="illustrated-avatar">
+                  <img src={avatarUrl(avatar) ?? ""} alt="" />
+                  {s.profile?.avatar_type === "avatar" && s.profile.avatar_id === avatar && <span className="avatar-check">✓</span>}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
         <form
           className="form-stack"
@@ -1575,7 +1576,7 @@ export function Settings() {
             void s.run(async () => {
               const { error } = await backend()
                 .from("profiles")
-                .update({ avatar_url: null, display_name: "Traveler" })
+                .update({ avatar_url: null, avatar_type: "default", avatar_id: null, avatar_storage_path: null, display_name: "Traveler" })
                 .eq("id", s.requireUser());
               if (error) throw error;
             }, "Public identity minimized")
