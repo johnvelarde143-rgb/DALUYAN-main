@@ -15,6 +15,7 @@ import { Empty, Skeleton } from "./components/common";
 import { Home, PostPage, ProfilePage, Discover } from "./features/Home";
 import { Hub, Detail } from "./features/Hub";
 import { Auth, Settings } from "./features/Auth";
+import { UserProfilePage } from "./features/Profile";
 const Notifications = lazy(() =>
   import("./features/Community").then((m) => ({ default: m.Notifications })),
 );
@@ -101,6 +102,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 <Route path="profiles/:id" element={<ProfilePage />} />
                 <Route path="discover" element={<Discover />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<UserProfilePage />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="rini" element={<Rini />} />
                 <Route path="feedback" element={<Feedback />} />

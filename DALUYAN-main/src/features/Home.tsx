@@ -4,6 +4,7 @@ import {
   ImagePlus,
   MapPin,
   MessageCircle,
+  MoreHorizontal,
   Heart,
   Share2,
   Bookmark,
@@ -225,6 +226,7 @@ export function PostCard({
   );
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const l = s.listings.find((l) => l.id === p.listing_id);
   const replies = s.posts.filter((x) => x.parent_id === p.id);
   const reactions = s.events.filter(
@@ -266,30 +268,11 @@ export function PostCard({
             <Flag size={16} />
           </button>
         )}
-        {own && (
-          <>
-            <button
-              className="icon-button"
-              aria-label="Edit post"
-              onClick={() => {
-                setDraft(p.body);
-                setDialog("edit");
-              }}
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              className="icon-button"
-              aria-label="Delete post"
-              onClick={() => setDialog("delete")}
-            >
-              <Trash2 size={15} />
-            </button>
-          </>
-        )}
+        {own && <div className="post-menu"><button className="icon-button" aria-label="Post options" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><MoreHorizontal size={17} /></button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setDraft(p.body); setDialog("edit"); setMenuOpen(false); }}><Pencil size={15} />Edit</button><button onClick={() => { setDialog("delete"); setMenuOpen(false); }}><Trash2 size={15} />Delete</button></div>}</div>}
       </div>
       {p.post_type === "review" && <Stars value={p.rating ?? 0} />}
       <p className="post-text">{p.body}</p>
+      {(p.category || p.visibility === "private") && <div className="post-labels">{p.category && <Badge>{p.category}</Badge>}{p.visibility === "private" && <Badge>ONLY ME</Badge>}</div>}
       {p.media_urls.length > 0 && (
         <div className={"post-media media-" + p.media_urls.length}>
           {p.media_urls.map((src, i) => (
@@ -465,7 +448,7 @@ export function PostCard({
                 if (dialog === "report")
                   await s.interact(p.id, "report", draft);
                 if (dialog === "edit") await s.editPost(p.id, draft);
-                if (dialog === "delete") await s.removePost(p.id);
+                if (dialog === "delete") await s.removePost(p.id, p.media_urls);
                 setDialog(null);
               }, "Content updated")
               .finally(() => setBusy(false));
@@ -503,7 +486,7 @@ export function Home() {
   const [limit, setLimit] = useState(6);
   const [compose, setCompose] = useState(false);
   const feed = rankFeed(
-    s.posts,
+    s.posts.filter((post) => post.visibility !== "private"),
     municipality,
     s.interests,
     s.listings,

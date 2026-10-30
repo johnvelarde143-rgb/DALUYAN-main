@@ -16,6 +16,8 @@ import type {
   SavedItem,
   Itinerary,
   Profile,
+  PostCategory,
+  PostVisibility,
 } from "./types";
 import { classify } from "./intelligence";
 type NewPost = Pick<
@@ -27,7 +29,7 @@ type NewPost = Pick<
       Post,
       "rating" | "parent_id" | "media_urls" | "category" | "feedback_status"
     >
-  >;
+  > & { visibility?: PostVisibility; category?: PostCategory | string | null };
 function useStoreValue() {
   const requestVersion = useRef(0);
   const currentUser = useRef<string | undefined>(undefined);
@@ -239,6 +241,8 @@ function useStoreValue() {
         rating: p.rating ?? null,
         parent_id: p.parent_id ?? null,
         media_urls: p.media_urls ?? [],
+        visibility: p.visibility ?? "public",
+        category: p.category ?? null,
         sentiment_label: classify(p.body),
         feedback_status: p.post_type === "feedback" ? "Received" : null,
       });
@@ -251,7 +255,16 @@ function useStoreValue() {
       .eq("id", id);
     if (error) throw error;
   }
-  async function removePost(id: string) {
+  async function removePost(id: string, mediaUrls: string[] = []) {
+    const paths = mediaUrls.flatMap((url) => {
+      const marker = "/object/public/post-media/";
+      const index = url.indexOf(marker);
+      return index >= 0 ? [decodeURIComponent(url.slice(index + marker.length))] : [];
+    });
+    if (paths.length) {
+      const { error } = await backend().storage.from("post-media").remove(paths);
+      if (error) throw error;
+    }
     const { error } = await backend().from("posts").delete().eq("id", id);
     if (error) throw error;
   }
