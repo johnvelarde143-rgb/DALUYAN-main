@@ -31,6 +31,7 @@ import {
 } from "../components/common";
 import { Butterfly } from "../components/CulturalArt";
 import { Weather } from "../components/Weather";
+import { MunicipalityStories } from "../components/MunicipalityStories";
 export function Composer({
   open,
   setOpen,
@@ -511,27 +512,7 @@ export function Home() {
               Explore all <ArrowUpRight size={14} />
             </Link>
           </div>
-          <div className="stories-track">
-            {municipalities.map((town, i) => (
-              <button
-                key={town}
-                className="town-story"
-                aria-label={`Show stories from ${town}`}
-                aria-pressed={municipality === town}
-                onClick={() => {
-                  setMunicipality(town);
-                  setLimit(6);
-                }}
-              >
-                <span className="story-ring">
-                  <span className={`story-art story-art-${i % 3}`}>
-                    <span>{town.slice(0, 2).toUpperCase()}</span>
-                  </span>
-                </span>
-                <span>{town}</span>
-              </button>
-            ))}
-          </div>
+          <MunicipalityStories towns={municipalities} selected={municipality} onSelect={(town) => { setMunicipality(town); setLimit(6); }} />
         </section>
         <section className="feed-welcome">
           <div>
