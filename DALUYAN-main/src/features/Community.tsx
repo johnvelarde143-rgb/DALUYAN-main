@@ -317,16 +317,35 @@ export function Rini() {
     });
     return () => { active = false; };
   }, [conversationId, historyOpen, s.session]);
+  async function riniError(error: unknown) {
+    if (error instanceof Error && "context" in error && error.context instanceof Response) {
+      if (error.context.status === 404) return "RINI is not deployed in this Supabase project yet. Deploy the rini-chat Edge Function, then try again.";
+      try {
+        const body = await error.context.clone().json() as { error?: string };
+        if (body.error) return body.error;
+      } catch {
+        // Use the SDK error when the response is not JSON.
+      }
+    }
+    return error instanceof Error ? error.message : "RINI could not reach the research service.";
+  }
   async function ask(text: string, retryText?: string) {
     const question = text.trim(); if (!question || busy) return;
     setMessages((old) => [...old, { id: crypto.randomUUID(), role: "user", text: question }]); setInput(""); setBusy(true); setError("");
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       let result: SmartChatMessage;
-      const response = await backend().functions.invoke("rini-chat", { body: { conversationId, message: question, previousMessages: messages.slice(-8).map(({ role, text: value }) => ({ role, text: value })) } });
+      const response = await backend().functions.invoke("rini-chat", { body: { conversationId, message: question, previousMessages: messages.slice(-8).map(({ role, text: value }) => ({ role, text: value })) }, signal: controller.signal });
       if (response.error) throw response.error;
       result = { id: crypto.randomUUID(), role: "assistant", text: String(response.data?.text ?? "I could not produce a grounded answer."), sources: Array.isArray(response.data?.sources) ? response.data.sources : [], verified: Boolean(response.data?.verified), intent: response.data?.intent };
       setMessages((old) => [...old, result]);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "RINI could not reach the research service."); setMessages((old) => [...old, { id: crypto.randomUUID(), role: "assistant", text: "I’m unable to reach the research service right now. Please try again, or use DALUYAN’s verified destination records while the connection is restored.", verified: false }]); }
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      const message = await riniError(cause);
+      setError(message);
+      setMessages((old) => [...old, { id: crypto.randomUUID(), role: "assistant", text: message, verified: false }]);
+    }
     finally { setBusy(false); abortRef.current = null; }
     void retryText;
   }

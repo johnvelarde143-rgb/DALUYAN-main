@@ -758,11 +758,10 @@ export function ProfilePage() {
   const name =
     posts[0]?.profiles?.display_name ??
     (s.session?.user.id === id ? s.profile?.display_name : "Traveler");
-  const authorProfile = posts[0]?.profiles;
   return (
     <div className="narrow-page">
       <div className="card profile-heading">
-        <Avatar name={name} url={authorProfile?.avatar_url ?? (s.session?.user.id === id ? s.profile?.avatar_url : null)} avatarType={authorProfile?.avatar_type ?? (s.session?.user.id === id ? s.profile?.avatar_type : null)} avatarId={authorProfile?.avatar_id ?? (s.session?.user.id === id ? s.profile?.avatar_id : null)} />
+        <Avatar name={name} url={s.profile?.avatar_url} avatarType={s.profile?.avatar_type} avatarId={s.profile?.avatar_id} />
         <h1>{name}</h1>
         <p>Public island stories</p>
       </div>
