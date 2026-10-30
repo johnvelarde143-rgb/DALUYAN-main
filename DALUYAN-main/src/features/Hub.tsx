@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ExternalLink, MapPin, Bookmark, Plus } from "lucide-react";
+import {
+  ExternalLink,
+  MapPin,
+  Bookmark,
+  Plus,
+  Megaphone,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useStore } from "../lib/store";
 import { backend, safeLink } from "../lib/supabase";
 import { municipalities } from "../lib/types";
@@ -17,29 +24,39 @@ import { Button } from "../components/ui/button";
 import { Modal } from "../components/ui/dialog";
 import { Weather } from "../components/Weather";
 import { Composer, PostCard } from "./Home";
+import { ListingMediaGallery, listingCover, listingCoverAlt } from "../components/ListingMedia";
 export function Hub() {
   const s = useStore();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [municipality, setMunicipality] = useState("");
+  const [listingType, setListingType] = useState<"" | "enterprise" | "heritage">("");
+  const [sort, setSort] = useState<"newest" | "name">("newest");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState("enterprise");
-  const listings = s.listings.filter(
-    (l) =>
-      l.listing_type !== "destination" &&
-      (!category || l.metadata.category === category) &&
-      (!municipality || l.municipality === municipality) &&
-      (l.name + " " + l.description)
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  );
+  const listings = s.listings
+    .filter(
+      (l) =>
+        l.listing_type !== "destination" &&
+        (!listingType || l.listing_type === listingType) &&
+        (!category || l.metadata.category === category) &&
+        (!municipality || l.municipality === municipality) &&
+        (l.name + " " + l.description)
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : b.created_at.localeCompare(a.created_at),
+    );
   return (
     <div className="page">
       <PageTitle
-        eyebrow="TOURISM AND CULTURE HUB"
-        title="Meet the heart behind the island."
-        description="Local stays, thoughtful makers, and cultural experiences. Discover here. Coordinate directly."
+        eyebrow="DALUYAN MARKETPLACE"
+        title="Find something local."
+        description="Browse community advertisements for stays, food, tours, crafts, and cultural experiences. Connect directly with the people behind each listing."
         action={
           <Button onClick={() => setOpen(true)}>
             <Plus size={17} />
@@ -48,11 +65,11 @@ export function Hub() {
         }
       />
       <div className="hub-intro">
-        <span>LOCAL PEOPLE. LASTING CONNECTIONS.</span>
+        <span><Megaphone size={13} /> LOCAL ADS · DIRECT CONNECTIONS</span>
         <h2>
-          Stay a little longer.
+          Discover island finds.
           <br />
-          Discover a little deeper.
+          Support local makers.
         </h2>
         <p>Support Marinduque’s communities through mindful travel.</p>
       </div>
@@ -99,10 +116,25 @@ export function Hub() {
             ))}
           </select>
         </label>
+        <label>
+          Sort by
+          <select value={sort} onChange={(e) => setSort(e.target.value as "newest" | "name")}>
+            <option value="newest">Newest ads</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </label>
+      </div>
+      <div className="marketplace-toolbar">
+        <div className="marketplace-tabs" aria-label="Ad type">
+          <button className={!listingType ? "active" : ""} onClick={() => setListingType("")}>All ads</button>
+          <button className={listingType === "enterprise" ? "active" : ""} onClick={() => setListingType("enterprise")}>Businesses</button>
+          <button className={listingType === "heritage" ? "active" : ""} onClick={() => setListingType("heritage")}>Culture &amp; heritage</button>
+        </div>
+        <span className="marketplace-count"><SlidersHorizontal size={14} /> {listings.length} {listings.length === 1 ? "ad" : "ads"}</span>
       </div>
       <p className="fine-print">
-        Seed business profiles are fictional demonstrations with no invented
-        contact links. DALUYAN does not provide booking or checkout.
+        Public listings are community-submitted and may require confirmation.
+        DALUYAN does not provide booking, checkout, or payment processing.
       </p>
       {s.loading ? (
         <Skeleton />
@@ -273,8 +305,11 @@ export function Detail() {
       </Link>
       <div className="detail-hero">
         <img
-          src={l.metadata.image || "/landscape-1.svg"}
-          alt="Original island landscape illustration; not a site photograph"
+          src={listingCover(l)}
+          alt={listingCoverAlt(l)}
+          loading="eager"
+          decoding="async"
+          onError={(event) => { event.currentTarget.src = "/landscape-1.svg"; }}
         />
         <span>ORIGINAL ILLUSTRATION · PHOTOGRAPHS PENDING VERIFIED MEDIA</span>
       </div>
@@ -310,6 +345,9 @@ export function Detail() {
               community reviews
             </span>
           </div>
+          <section className="detail-section">
+            <ListingMediaGallery listing={l} />
+          </section>
           <section className="detail-section">
             <h2>A little about this place</h2>
             <p>{l.description}</p>

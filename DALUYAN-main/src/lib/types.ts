@@ -8,6 +8,22 @@ export const municipalities = [
 ] as const;
 export type Municipality = (typeof municipalities)[number];
 export type Moderation = "published" | "pending" | "rejected";
+export type ListingMediaRights = "authorized" | "permission_required" | "unknown";
+export type ListingMedia = {
+  id: string;
+  enterprise_id?: string;
+  storage_path?: string;
+  url: string;
+  original_url: string;
+  alt: string;
+  kind: "cover" | "product" | "service" | "facility";
+  rights_status: ListingMediaRights;
+  approval_status?: "pending" | "approved" | "rejected";
+  source_url?: string | null;
+  license?: string | null;
+  attribution?: string | null;
+  approved: boolean;
+};
 export type Listing = {
   id: string;
   owner_id: string | null;
@@ -42,6 +58,10 @@ export type Listing = {
     address?: string;
     cultural_context?: string;
     fictional?: boolean;
+    media_gallery?: ListingMedia[];
+    cover_photo_url?: string | null;
+    media_status?: "approved" | "awaiting_authorized_photos";
+    photo_source_urls?: string[];
   };
 };
 export type Profile = {

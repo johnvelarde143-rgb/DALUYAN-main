@@ -16,8 +16,10 @@ import type {
   SavedItem,
   Itinerary,
   Profile,
+  ListingMedia,
 } from "./types";
 import { classify } from "./intelligence";
+import { enterpriseListings15 } from "../data/enterpriseListings15";
 type NewPost = Pick<
   Post,
   "body" | "listing_id" | "municipality" | "post_type"
@@ -122,6 +124,11 @@ function useStoreValue() {
       const queries = await Promise.all([
         client.from("listings").select("*").order("name"),
         client
+          .from("enterprise_media")
+          .select("*")
+          .eq("approval_status", "approved")
+          .order("display_order"),
+        client
           .from("posts")
           .select("*,profiles!posts_author_id_fkey(display_name,avatar_url,avatar_type,avatar_id)")
           .order("created_at", { ascending: false })
@@ -132,13 +139,29 @@ function useStoreValue() {
           .order("created_at", { ascending: false })
           .limit(500),
       ]);
-      queries.forEach((r) => {
+      const listingError = queries[0].error;
+      const mediaResult = queries[1];
+      queries.slice(2).forEach((r) => {
         if (r.error) throw r.error;
       });
       if (!isCurrent()) return;
-      setListings(queries[0].data as Listing[]);
-      setPosts(queries[1].data as Post[]);
-      setEvents(queries[2].data as ActivityEvent[]);
+      const serverListings = (queries[0].data ?? []) as Listing[];
+      const approvedMedia = mediaResult.error
+        ? []
+        : await resolveApprovedMedia((mediaResult.data ?? []) as Array<Record<string, unknown>>);
+      const listingsWithMedia = serverListings.map((listing) => ({
+        ...listing,
+        metadata: {
+          ...listing.metadata,
+          media_gallery: approvedMedia.filter((media) => media.enterprise_id === listing.id),
+          cover_photo_url: approvedMedia.find((media) => media.enterprise_id === listing.id && media.kind === "cover")?.url ?? null,
+          media_status: approvedMedia.some((media) => media.enterprise_id === listing.id) ? "approved" as const : listing.metadata.media_status,
+        },
+      }));
+      setListings(listingsWithMedia.length ? listingsWithMedia : enterpriseListings15);
+      if (listingError) setError(`Showing the verified local listing directory while listings sync: ${listingError.message}`);
+      setPosts(queries[2].data as Post[]);
+      setEvents(queries[3].data as ActivityEvent[]);
       if (uid) {
         const q = await Promise.all([
           client.from("saved_items").select("*").eq("user_id", uid),
@@ -314,6 +337,53 @@ function useStoreValue() {
       ? path
       : backend().storage.from(bucket).getPublicUrl(path).data.publicUrl;
   }
+  async function uploadEnterpriseMedia(
+    file: File,
+    input: {
+      enterpriseId: string;
+      mediaType: "cover" | "product" | "service" | "facility";
+      altText: string;
+      sourceUrl?: string;
+      licenseInfo?: string;
+      attribution?: string;
+    },
+  ) {
+    const user = requireUser();
+    if (!session) throw new Error("Sign in to upload enterprise media.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 10 * 1024 * 1024)
+      throw new Error("Use a JPEG, PNG or WebP image under 10 MB.");
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Image processing unavailable");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Cannot compress image")), "image/webp", 0.84),
+    );
+    const filename = input.mediaType + "-" + crypto.randomUUID() + ".webp";
+    const storagePath = `${input.enterpriseId}/${filename}`;
+    const { error: uploadError } = await backend().storage.from("enterprise-media").upload(storagePath, blob, { contentType: "image/webp", upsert: false });
+    if (uploadError) throw uploadError;
+    const { error: mediaError } = await backend().from("enterprise_media").insert({
+      enterprise_id: input.enterpriseId,
+      storage_path: storagePath,
+      media_type: input.mediaType,
+      alt_text: input.altText,
+      source_url: input.sourceUrl ?? null,
+      license_info: input.licenseInfo ?? null,
+      attribution: input.attribution ?? null,
+      permission_status: "pending",
+      approval_status: "pending",
+      is_cover: input.mediaType === "cover",
+      uploaded_by: user,
+    });
+    if (mediaError) throw mediaError;
+    return storagePath;
+  }
   return {
     interests,
     setInterests,
@@ -342,8 +412,40 @@ function useStoreValue() {
     toggleSave,
     markRead,
     upload,
+    uploadEnterpriseMedia,
     requireUser,
   };
+}
+
+async function resolveApprovedMedia(rows: Array<Record<string, unknown>>): Promise<ListingMedia[]> {
+  const resolved: Array<ListingMedia | null> = await Promise.all(rows.map(async (row): Promise<ListingMedia | null> => {
+    const storagePath = typeof row.storage_path === "string" ? row.storage_path : "";
+    const enterpriseId = typeof row.enterprise_id === "string" ? row.enterprise_id : "";
+    if (!storagePath || !enterpriseId || !supabase) return null;
+    const url = supabase.storage.from("enterprise-media").getPublicUrl(storagePath).data.publicUrl;
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      if (!response.ok) return null;
+    } catch {
+      return null;
+    }
+    return {
+      id: String(row.id),
+      enterprise_id: enterpriseId,
+      storage_path: storagePath,
+      url,
+      original_url: typeof row.source_url === "string" ? row.source_url : url,
+      alt: typeof row.alt_text === "string" ? row.alt_text : "Authorized enterprise photograph",
+      kind: row.media_type === "product" || row.media_type === "service" || row.media_type === "facility" ? row.media_type : "cover",
+      rights_status: "authorized",
+      approval_status: "approved",
+      source_url: typeof row.source_url === "string" ? row.source_url : null,
+      license: typeof row.license_info === "string" ? row.license_info : null,
+      attribution: typeof row.attribution === "string" ? row.attribution : null,
+      approved: true,
+    } satisfies ListingMedia;
+  }));
+  return resolved.filter((media): media is ListingMedia => media !== null);
 }
 const Context = createContext<ReturnType<typeof useStoreValue> | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
