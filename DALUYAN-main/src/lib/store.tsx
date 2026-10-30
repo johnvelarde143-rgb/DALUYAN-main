@@ -56,7 +56,7 @@ function useStoreValue() {
   useEffect(() => {
     if (!supabase) {
       setError(
-        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to use DALUYAN.",
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to use DALUYAN.",
       );
       setAuthReady(true);
       return;

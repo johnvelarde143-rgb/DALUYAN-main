@@ -479,7 +479,7 @@ function RegisterWizard({
       onDone(
         result.session
           ? "Your account is ready. Welcome to DALUYAN!"
-          : "Check your email for verification. Your island preferences are saved and ready for your first visit.",
+          : "Registration succeeded, but no session was returned. Turn off Confirm email in Supabase Auth to enable automatic login.",
       );
     } catch (e) {
       setError(
@@ -1241,7 +1241,7 @@ export function Auth() {
                     const client = backend();
                     const captchaToken = token || undefined;
                     if (mode === "register") {
-                      const { error } = await client.auth.signUp({
+                      const { data: authData, error } = await client.auth.signUp({
                         email,
                         password,
                         options: {
@@ -1255,7 +1255,9 @@ export function Auth() {
                       });
                       if (error) throw error;
                       setMessage(
-                        "Check your email for verification. Registration does not bypass email confirmation.",
+                        authData.session
+                          ? "Your account is ready. Welcome to DALUYAN!"
+                          : "Registration succeeded. Disable Confirm email in Supabase Auth settings to sign in automatically.",
                       );
                     } else if (mode === "reset") {
                       const { error } = await client.auth.resetPasswordForEmail(
