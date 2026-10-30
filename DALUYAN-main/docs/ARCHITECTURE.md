@@ -36,7 +36,7 @@ HOME saves listing IDs → private saved items → MAP stop selection and weight
 
 ## Modes and limitations
 
-Missing Supabase configuration selects an explicitly labeled **read-only public preview**, using bundled unverified introductory destinations and fictional examples. It does not substitute local storage for backend persistence. Configured backend failures display errors rather than silently switching to a fake working backend. Browser storage is used only for non-secret feed interests scoped to account ID; chat is tab memory. Optional PWA/IndexedDB/AR/payments are deferred.
+Supabase is required for the application. Missing configuration is reported as an error instead of selecting a local or read-only preview, and backend failures are surfaced rather than silently switching to a fake working backend. Browser storage is used only for non-secret feed interests scoped to account ID; chat is tab memory. Optional PWA/IndexedDB/AR/payments are deferred.
 
 Map tiles and weather fail independently; accessible place lists and official-source links remain available. No routing engine, live vessel feed, sensor, paid LLM, booking, checkout or native mobile code exists. Forecast requests have cancellation/timeouts, retry and last-retrieval information when data exists.
 

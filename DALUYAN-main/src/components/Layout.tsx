@@ -22,7 +22,7 @@ import {
   Compass,
 } from "lucide-react";
 import { useStore } from "../lib/store";
-import { configured, backend } from "../lib/supabase";
+import { backend } from "../lib/supabase";
 import { Butterfly, WaveDivider } from "./CulturalArt";
 import { Avatar, Skeleton } from "./common";
 import { Modal } from "./ui/dialog";
@@ -208,12 +208,6 @@ export function Layout() {
             <Avatar name={s.profile?.display_name ?? "Guest"} small />
           </Link>
         </header>
-        {!configured && (
-          <div className="preview-banner">
-            PUBLIC PREVIEW · Fictional community posts and businesses. Connect
-            Supabase for accounts and persistent interactions.
-          </div>
-        )}
         {s.needsMfa && (
           <div className="preview-banner">
             Finish your secure login:{" "}

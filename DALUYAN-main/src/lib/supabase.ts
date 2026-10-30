@@ -15,7 +15,7 @@ export const configured = !!supabase;
 export function backend() {
   if (!supabase)
     throw new Error(
-      "Supabase is not configured. This is a read-only public preview.",
+      "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to use DALUYAN.",
     );
   return supabase;
 }

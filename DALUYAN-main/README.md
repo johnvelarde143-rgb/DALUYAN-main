@@ -4,7 +4,7 @@
 
 A responsive React tourism application with the six official modules: HOME, MAP, TOURISM AND CULTURE HUB, NOTIFICATIONS, RINI, and SETTINGS. Includes Supabase integration, SQL security policies, deterministic intelligence, and an MFA-protected administrator interface.
 
-**Current status:** buildable development implementation with locally tested guest workflows and PostgreSQL permissions. It is **not a fully accepted or deployed platform**. No Supabase project credentials or Cloudflare deployment are configured. Without Supabase the application explicitly runs a read-only public preview: it never pretends to authenticate or persist community actions. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and [test evidence](docs/TEST_RESULTS.md).
+**Current status:** buildable development implementation with Supabase-backed authentication, persistent community actions, and PostgreSQL permissions. Configure the public Supabase URL and publishable browser key before running the application; the app does not provide a local or read-only preview fallback. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and [test evidence](docs/TEST_RESULTS.md).
 
 ## Develop
 
