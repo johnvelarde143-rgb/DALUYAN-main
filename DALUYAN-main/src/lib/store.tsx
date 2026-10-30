@@ -20,6 +20,7 @@ import type {
 } from "./types";
 import { classify } from "./intelligence";
 import { enterpriseListings15 } from "../data/enterpriseListings15";
+import { marinduqueDestinations } from "../data/marinduqueDestinations";
 type NewPost = Pick<
   Post,
   "body" | "listing_id" | "municipality" | "post_type"
@@ -158,7 +159,7 @@ function useStoreValue() {
           media_status: approvedMedia.some((media) => media.enterprise_id === listing.id) ? "approved" as const : listing.metadata.media_status,
         },
       }));
-      setListings(listingsWithMedia.length ? listingsWithMedia : enterpriseListings15);
+      setListings(listingsWithMedia.length ? listingsWithMedia : [...marinduqueDestinations, ...enterpriseListings15]);
       if (listingError) setError(`Showing the verified local listing directory while listings sync: ${listingError.message}`);
       setPosts(queries[2].data as Post[]);
       setEvents(queries[3].data as ActivityEvent[]);

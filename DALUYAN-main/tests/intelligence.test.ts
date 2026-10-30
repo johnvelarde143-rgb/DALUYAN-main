@@ -10,6 +10,7 @@ import {
   type Preferences,
 } from "../src/lib/intelligence";
 import { seedListings, seedPosts } from "../src/data";
+import { marinduqueDestinations } from "../src/data/marinduqueDestinations";
 import scenarios from "../src/data/ferry_scenarios.json";
 const pref: Preferences = {
   days: 2,
@@ -89,6 +90,12 @@ describe("itinerary and feed ranking", () => {
     expect(r.every((x) => x.score >= 0 && x.score <= 1 && !!x.reason)).toBe(
       true,
     );
+  });
+  it("generates from the source-reviewed Marinduque destination set", () => {
+    const result = recommend(marinduqueDestinations, pref, scenarios[0]);
+    expect(result.length).toBeGreaterThanOrEqual(3);
+    expect(result.map((item) => item.listing.name)).toContain("Poctoy White Beach");
+    expect(result.every((item) => item.listing.source_url?.includes("marinduque.gov.ph"))).toBe(true);
   });
   it("excludes unverified and private-promotion destinations", () => {
     expect(recommend(seedListings, pref, scenarios[0])).toHaveLength(0);
